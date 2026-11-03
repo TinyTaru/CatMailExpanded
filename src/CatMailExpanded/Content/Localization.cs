@@ -11,7 +11,7 @@ namespace CatMailExpanded.Content
     /// Column order: English, French, Italian, German, Spanish, Brazilian Portuguese, Polish,
     /// Chinese (Simplified), Chinese (Traditional), Japanese, Korean, Ukrainian, Russian.
     /// </summary>
-    internal static class Localization
+    internal static partial class Localization
     {
         static readonly string[] LangNames =
         {
@@ -541,7 +541,13 @@ namespace CatMailExpanded.Content
                 "산만함: 음악 근처에 보관",
                 "Неспокійна: тримати біля музики",
                 "Беспокойная: держать рядом с музыкой");
+            Expansion();
+            GiftsText();
+            DialogueText();
         }
+
+        static LanguageSourceData _src;
+        static int[] _langCols;
 
         /// <summary>Adds all mod terms to the game's I2 source. Safe to call repeatedly.</summary>
         public static void Inject()
@@ -562,24 +568,58 @@ namespace CatMailExpanded.Content
                     if (string.Equals(name, LangNames[i], StringComparison.OrdinalIgnoreCase)) langCols[i] = c;
             }
 
-            void AddTerm(string key, string[] text)
-            {
-                var term = src.GetTermData(key, false) ?? src.AddTerm(key, eTermType.Text, false);
-                var arr = term.Languages;
-                for (int c = 0; c < arr.Length; c++)
-                {
-                    // default every language column to English, then fill known translations
-                    if (langs[c].Name == "English" || c < langs.Count && (langs[c].Flags & 1) == 0) arr[c] = text[0];
-                }
-                for (int i = 0; i < LangNames.Length && i < text.Length; i++)
-                    if (langCols[i] >= 0 && langCols[i] < arr.Length) arr[langCols[i]] = text[i];
-            }
-
+            _src = src;
+            _langCols = langCols;
             foreach (var l in DialogueLines) AddTerm(l.Key, l.Text);
             foreach (var kv in _ui) AddTerm(kv.Key, kv.Value);
             src.UpdateDictionary(true);
             _injected = true;
             Plugin.Log.Msg($"Injected {DialogueLines.Count + _ui.Count} localization terms");
+        }
+
+        static void AddTerm(string key, string[] text)
+        {
+            var src = _src;
+            var langs = src.mLanguages;
+            var term = src.GetTermData(key, false) ?? src.AddTerm(key, eTermType.Text, false);
+            var arr = term.Languages;
+            for (int c = 0; c < arr.Length; c++)
+            {
+                // default every language column to English, then fill known translations
+                if (langs[c].Name == "English" || c < langs.Count && (langs[c].Flags & 1) == 0) arr[c] = text[0];
+            }
+            for (int i = 0; i < LangNames.Length && i < text.Length; i++)
+                if (_langCols[i] >= 0 && _langCols[i] < arr.Length) arr[_langCols[i]] = text[i];
+        }
+
+        /// <summary>
+        /// A term made of other terms' text joined into one line (no spaces in Chinese and Japanese), created the first
+        /// time it is asked for. Returns its key.
+        /// </summary>
+        public static string Composite(string key, params string[] parts)
+        {
+            Inject();
+            if (_ui.ContainsKey(key)) return key;
+            var text = new string[LangNames.Length];
+            for (int i = 0; i < text.Length; i++)
+            {
+                string sep = i >= 7 && i <= 9 ? "" : " ";
+                var sb = new System.Text.StringBuilder();
+                foreach (var p in parts)
+                {
+                    if (!_ui.TryGetValue(p, out var t)) continue;
+                    if (sb.Length > 0) sb.Append(sep);
+                    sb.Append(i < t.Length ? t[i] : t[0]);
+                }
+                text[i] = sb.ToString();
+            }
+            _ui[key] = text;
+            if (_injected && _src != null)
+            {
+                try { AddTerm(key, text); _src.UpdateDictionary(true); }
+                catch (Exception e) { Plugin.Log.Warning("Composite term: " + e.Message); }
+            }
+            return key;
         }
 
         public static void ResetInjection() => _injected = false;

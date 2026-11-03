@@ -157,6 +157,25 @@ namespace CatMailExpanded.Core
             return Build(v, n, uv, t);
         });
 
+        /// <summary>Unit cube centred on the origin, a separate quad per face.</summary>
+        public static Mesh Cube() => Cached("cube", () =>
+        {
+            var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+            foreach (var d in new[] { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back })
+            {
+                var a = Mathf.Abs(d.y) > 0.5f ? Vector3.forward : Vector3.up;
+                var b = Vector3.Cross(d, a);
+                int i0 = v.Count;
+                foreach (var (x, y) in new[] { (-1, -1), (1, -1), (1, 1), (-1, 1) })
+                {
+                    v.Add(d * 0.5f + b * (x * 0.5f) + a * (y * 0.5f)); n.Add(d); uv.Add(new Vector2((x + 1) / 2, (y + 1) / 2));
+                }
+                // wound so the face points along d
+                t.Add(i0); t.Add(i0 + 2); t.Add(i0 + 1); t.Add(i0); t.Add(i0 + 3); t.Add(i0 + 2);
+            }
+            return Build(v, n, uv, t);
+        });
+
         /// <summary>Unit quad in the local XY plane facing local -Z (towards a viewer looking along +Z).</summary>
         public static Mesh Quad() => Cached("quad", () =>
         {

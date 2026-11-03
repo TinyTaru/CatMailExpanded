@@ -15,11 +15,17 @@ namespace CatMailExpanded.Content
         const string KeyYardAnnounced = "CME_YardAnnounced";
         const string KeySpeakerAnnounced = "CME_SpeakerRoomAnnounced";
         const string KeyPlanetariumAnnounced = "CME_PlanetariumAnnounced";
+        const string KeyGiftsAnnounced = "CME_GiftRoomAnnounced";
+        const string KeyMirrorAnnounced = "CME_MirrorAnnounced";
         const string KeyFinishedEnding = "FinishedEnding";
 
         public static bool YardUnlocked { get; private set; }
         public static bool SpeakerRoomUnlocked { get; private set; }
         public static bool PlanetariumUnlocked { get; private set; }
+        /// <summary>The Catazon returns room: its door is reached once the main pile recedes past it.</summary>
+        public static bool GiftRoomUnlocked { get; private set; }
+        /// <summary>The mirror room (spectral parcels): its door is reached when the pile turns bottomless.</summary>
+        public static bool MirrorUnlocked { get; private set; }
         public static bool GameStarted { get; private set; }
 
         /// <summary>
@@ -33,11 +39,21 @@ namespace CatMailExpanded.Content
 
         static bool IsServer => NetworkManager.Instance == null || NetworkManager.Instance.IsServer;
 
+        static bool _hooked;
+
         public static void Reset()
         {
+            if (!_hooked)
+            {
+                _hooked = true;
+                // the returns and mirror rooms open as the main pile recedes past their doors
+                PileExtension.StageChanged += () => { if (GameStarted) Refresh(fromSave: false); };
+            }
             YardUnlocked = false;
             SpeakerRoomUnlocked = false;
             PlanetariumUnlocked = false;
+            GiftRoomUnlocked = false;
+            MirrorUnlocked = false;
             GameStarted = false;
             EndingSeenThisSession = false;
             _announced.Clear();
@@ -51,6 +67,8 @@ namespace CatMailExpanded.Content
             WorldSetup.EnsureBuilt();
             Yard.SetOpen(false, animate: false);
             Planetarium.SetOpen(false, animate: false);
+            PileWing.SetGiftRoomOpen(false);
+            MirrorRoom.SetOpen(false, animate: false);
             Refresh(fromSave: true);
             SpeakerRoom.ApplyState();
         }
@@ -84,6 +102,26 @@ namespace CatMailExpanded.Content
                 UnlockConstraints(new[] { ParcelKinds.Otherworldly });
                 Announce(KeyPlanetariumAnnounced, Localization.Text("CME/Unlock_Planetarium"), fromSave, "sticker_otherworldly");
             }
+            int stage = PileExtension.CurrentStage;
+            bool stageKnown = stage >= -1;
+            bool returns = (stageKnown && PileExtension.ReturnsRevealed(stage)) || Plugin.ForceUnlockAll.Value;
+            bool mirror = (stageKnown && PileExtension.MirrorRevealed(stage)) || Plugin.ForceUnlockAll.Value;
+            if (returns && !GiftRoomUnlocked)
+            {
+                GiftRoomUnlocked = true;
+                changed = true;
+                PileWing.SetGiftRoomOpen(true);
+                GiftRoom.OnUnlocked(fromSave);
+                Announce(KeyGiftsAnnounced, Localization.Text("CME/Unlock_Gifts"), fromSave, "gift_logo");
+            }
+            if (mirror && !MirrorUnlocked)
+            {
+                MirrorUnlocked = true;
+                changed = true;
+                MirrorRoom.SetOpen(true, animate: !fromSave);
+                UnlockConstraints(new[] { ParcelKinds.Spectral });
+                Announce(KeyMirrorAnnounced, Localization.Text("CME/Unlock_Mirror"), fromSave, "sticker_spectral");
+            }
             if (ending && !SpeakerRoomUnlocked)
             {
                 SpeakerRoomUnlocked = true;
@@ -94,7 +132,7 @@ namespace CatMailExpanded.Content
             }
             if (changed)
             {
-                Plugin.Log.Msg($"Progress: yard={YardUnlocked} planetarium={PlanetariumUnlocked} speakerRoom={SpeakerRoomUnlocked} (level {prog.CurrentLevel}, ending {ending})");
+                Plugin.Log.Msg($"Progress: yard={YardUnlocked} planetarium={PlanetariumUnlocked} gifts={GiftRoomUnlocked} mirror={MirrorUnlocked} speakerRoom={SpeakerRoomUnlocked} (level {prog.CurrentLevel}, pile stage {stage}, ending {ending})");
                 Changed?.Invoke();
             }
         }

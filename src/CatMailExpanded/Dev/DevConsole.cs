@@ -250,6 +250,10 @@ namespace CatMailExpanded.Dev
                     "banana" => Content.ParcelKinds.Banana,
                     "restless" => Content.ParcelKinds.Restless,
                     "otherworldly" => Content.ParcelKinds.Otherworldly,
+                    "spectral" => Content.ParcelKinds.Spectral,
+                    "return" => Content.ParcelKinds.Return,
+                    "wrapped" => Content.ParcelKinds.ReturnWrapped,
+                    "gift" => Content.ParcelKinds.Gift,
                     "cold" => Il2Cpp.StorageConstraint.Cold,
                     _ => Il2Cpp.StorageConstraint.None,
                 };
@@ -691,9 +695,11 @@ namespace CatMailExpanded.Dev
             });
             Register("timescale", a => Time.timeScale = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture));
             DevPlanetarium.Register();
+            DevExpansion.Register();
         }
 
         public static void Register(string name, Action<string[]> act) => _commands[name] = act;
+        public static void Run(string line) { var a = line.Split(' '); if (_commands.TryGetValue(a[0], out var act)) act(a); }
 
         static void Scheduler_After(float s, Action a) => Core.Scheduler.After(s, a);
 

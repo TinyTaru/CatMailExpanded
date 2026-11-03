@@ -62,6 +62,7 @@ namespace CatMailExpanded.Core
 
         static Source Read(Mesh mesh, Matrix4x4 toWorld)
         {
+            if (mesh.isReadable) return ReadCpu(mesh, toWorld);
             var src = new Source();
             int vc = mesh.vertexCount;
             for (int i = 0; i < vc; i++) src.Verts.Add(new float[Size]);
@@ -123,6 +124,45 @@ namespace CatMailExpanded.Core
                         int idx = wide ? (int)BitConverter.ToUInt32(ib, at * 4) : BitConverter.ToUInt16(ib, at * 2);
                         list.Add(idx + sd.baseVertex);
                     }
+                src.Subs.Add(list);
+            }
+            return src;
+        }
+
+        /// <summary>Meshes the mod built (or already cut) are CPU readable: no GPU read-back needed.</summary>
+        static Source ReadCpu(Mesh mesh, Matrix4x4 toWorld)
+        {
+            var src = new Source();
+            var pos = mesh.vertices;
+            var nrm = mesh.normals;
+            var tan = mesh.tangents;
+            var uv0 = mesh.uv;
+            var uv1 = mesh.uv2;
+            var col = mesh.colors;
+            int vc = pos.Length;
+            src.HasN = nrm != null && nrm.Length == vc;
+            src.HasT = tan != null && tan.Length == vc;
+            src.HasU0 = uv0 != null && uv0.Length == vc;
+            src.HasU1 = uv1 != null && uv1.Length == vc;
+            src.HasC = col != null && col.Length == vc;
+            for (int i = 0; i < vc; i++)
+            {
+                var v = new float[Size];
+                v[P] = pos[i].x; v[P + 1] = pos[i].y; v[P + 2] = pos[i].z;
+                if (src.HasN) { v[N] = nrm[i].x; v[N + 1] = nrm[i].y; v[N + 2] = nrm[i].z; }
+                if (src.HasT) { v[T] = tan[i].x; v[T + 1] = tan[i].y; v[T + 2] = tan[i].z; v[T + 3] = tan[i].w; } else v[T + 3] = 1f;
+                if (src.HasU0) { v[U0] = uv0[i].x; v[U0 + 1] = uv0[i].y; }
+                if (src.HasU1) { v[U1] = uv1[i].x; v[U1 + 1] = uv1[i].y; }
+                if (src.HasC) { v[C] = col[i].r; v[C + 1] = col[i].g; v[C + 2] = col[i].b; v[C + 3] = col[i].a; } else v[C] = v[C + 1] = v[C + 2] = v[C + 3] = 1f;
+                var w = toWorld.MultiplyPoint3x4(pos[i]);
+                v[W] = w.x; v[W + 1] = w.y; v[W + 2] = w.z;
+                src.Verts.Add(v);
+            }
+            for (int s = 0; s < mesh.subMeshCount; s++)
+            {
+                var list = new List<int>();
+                if (mesh.GetTopology(s) == MeshTopology.Triangles)
+                    foreach (var i in mesh.GetTriangles(s)) list.Add(i);
                 src.Subs.Add(list);
             }
             return src;
@@ -214,7 +254,64 @@ namespace CatMailExpanded.Core
                 subs.Add(outIdx);
             }
             if (changed == 0) return 0;
+            var m = Build(mesh.name + "_CME_cut", src, verts, subs);
+            mf.sharedMesh = m;
+            return changed;
+        }
 
+        /// <summary>
+        /// Copies the part of the renderer's mesh that lies inside the world-space box, as a new mesh in the
+        /// renderer's own local space (null when nothing is inside). Used to extend the game's rooms with
+        /// slices of their own walls, floors and ceilings.
+        /// </summary>
+        public static Mesh Extract(MeshFilter mf, Vector3 min, Vector3 max)
+        {
+            var mesh = mf.sharedMesh;
+            var src = Read(mesh, mf.transform.localToWorldMatrix);
+            var verts = new List<float[]>();
+            var subs = new List<List<int>>();
+            int kept = 0;
+            foreach (var list in src.Subs)
+            {
+                var outIdx = new List<int>();
+                for (int i = 0; i + 2 < list.Count; i += 3)
+                {
+                    var poly = new List<float[]> { src.Verts[list[i]], src.Verts[list[i + 1]], src.Verts[list[i + 2]] };
+                    for (int axis = 0; axis < 3 && poly.Count >= 3; axis++)
+                        poly = Clip(Clip(poly, axis, min[axis], false), axis, max[axis], true);
+                    if (poly.Count < 3) continue;
+                    // drop slivers left on the box faces
+                    if (Area(poly) < 1e-6f) continue;
+                    kept++;
+                    int baseIdx = verts.Count;
+                    verts.AddRange(poly);
+                    for (int k = 1; k + 1 < poly.Count; k++)
+                    {
+                        outIdx.Add(baseIdx);
+                        outIdx.Add(baseIdx + k);
+                        outIdx.Add(baseIdx + k + 1);
+                    }
+                }
+                subs.Add(outIdx);
+            }
+            return kept == 0 ? null : Build(mesh.name + "_CME_slice", src, verts, subs);
+        }
+
+        static float Area(List<float[]> poly)
+        {
+            var a = new Vector3(poly[0][W], poly[0][W + 1], poly[0][W + 2]);
+            float s = 0;
+            for (int k = 1; k + 1 < poly.Count; k++)
+            {
+                var b = new Vector3(poly[k][W], poly[k][W + 1], poly[k][W + 2]);
+                var c = new Vector3(poly[k + 1][W], poly[k + 1][W + 1], poly[k + 1][W + 2]);
+                s += Vector3.Cross(b - a, c - a).magnitude * 0.5f;
+            }
+            return s;
+        }
+
+        static Mesh Build(string name, Source src, List<float[]> verts, List<List<int>> subs)
+        {
             int n = verts.Count;
             var pos = new Vector3[n];
             var nrm = new Vector3[n];
@@ -232,7 +329,7 @@ namespace CatMailExpanded.Core
                 uv1[i] = new Vector2(v[U1], v[U1 + 1]);
                 col[i] = new Color(v[C], v[C + 1], v[C + 2], v[C + 3]);
             }
-            var m = new Mesh { name = mesh.name + "_CME_cut" };
+            var m = new Mesh { name = name };
             if (n > 65000) m.indexFormat = IndexFormat.UInt32;
             m.vertices = pos;
             if (src.HasN) m.normals = nrm;
@@ -245,8 +342,7 @@ namespace CatMailExpanded.Core
             m.RecalculateBounds();
             if (!src.HasN) m.RecalculateNormals();
             m.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            mf.sharedMesh = m;
-            return changed;
+            return m;
         }
     }
 }

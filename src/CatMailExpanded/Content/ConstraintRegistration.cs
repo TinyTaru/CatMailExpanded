@@ -25,6 +25,7 @@ namespace CatMailExpanded.Content
                 epm.Constraints = new Il2CppReferenceArray<ConstraintSettings>(list.ToArray());
                 Plugin.Log.Msg($"Registered new parcel constraint settings ({list.Count} total)");
             }
+            GiftRoom.ExtendRibbons(epm);
             ModStamps.Attach(epm);
         }
 
