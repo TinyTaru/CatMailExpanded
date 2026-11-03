@@ -1,0 +1,35 @@
+# --- Build output ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# --- Python ---
+__pycache__/
+*.pyc
+
+# --- Third-party content (paid / copyrighted / large) ---
+# Synty asset packs (licensed, ~2.7 GB)
+/AssetPacks/
+# Decompiled game code and ripped assets (game owner's copyright)
+/Decompiled/
+# Downloaded RE tools (AssetRipper, Cpp2IL)
+/Tools/AssetRipper/
+/Tools/Cpp2IL/
+
+# --- Local data ---
+# Game save backups
+/Backups/
+*.log
+
+# --- Blender ---
+*.blend1
+*.blend2
+
+# --- OS ---
+Thumbs.db
+Desktop.ini
+.DS_Store
