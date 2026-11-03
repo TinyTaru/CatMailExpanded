@@ -19,6 +19,7 @@ namespace CatMailExpanded.Patches
             ("Banana", ParcelKinds.Banana),
             ("Restless", ParcelKinds.Restless),
             ("Otherworldly", ParcelKinds.Otherworldly),
+            ("Spectral", ParcelKinds.Spectral),
         };
 
         [HarmonyPatch(typeof(SpawnerInterface), nameof(SpawnerInterface.InitializeConstraintsDropdown))]

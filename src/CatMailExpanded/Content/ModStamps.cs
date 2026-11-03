@@ -44,6 +44,7 @@ namespace CatMailExpanded.Content
             {
                 if (cs == null || !ParcelKinds.IsModValue(cs.Constraint)) continue;
                 var kind = ParcelKinds.KindOf(cs.Constraint);
+                if (ParcelKinds.StickerTexture(kind) == null) continue;   // return items carry no sticker
                 if (!_byKind.TryGetValue(kind, out var data) || !data)
                 {
                     try { data = Create(template, kind, cs.Constraint); made++; }

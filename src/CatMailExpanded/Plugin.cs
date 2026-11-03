@@ -53,6 +53,10 @@ namespace CatMailExpanded
                 ParcelTracker.Update();
                 Yard.Update();
                 Planetarium.Update();
+                MirrorRoom.Update();
+                GiftRoom.Update();
+                Spectral.Update();
+                RecapRow.Update();
                 FrontPath.Update();
                 OutdoorAtmosphere.Update();
                 SpeakerRoom.Update();
@@ -83,6 +87,11 @@ namespace CatMailExpanded
             SpeakerRoom.Reset();
             Yard.Reset();
             Planetarium.Reset();
+            PileWing.Reset();
+            PileExtension.Reset();
+            MirrorRoom.Reset();
+            GiftRoom.Reset();
+            RecapRow.Reset();
             FrontPath.Reset();
             Outdoors.Reset();
             Patches.EntityScanner_ScanParcel.Reset();

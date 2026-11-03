@@ -1,6 +1,6 @@
 # Cat Mail Expanded
 
-A MelonLoader mod for **Cat Mail Co.** that adds three new parcel types, an outdoor yard, a planetarium and a speaker room.
+A MelonLoader mod for **Cat Mail Co.** that adds new parcel types, an outdoor yard, a planetarium, a speaker room, and a longer mail pile corridor with a mirror room and a gift wrapping room.
 
 ## What it adds
 
@@ -23,6 +23,29 @@ A MelonLoader mod for **Cat Mail Co.** that adds three new parcel types, an outd
 - Inside: a painted nebula sky turning slowly overhead, an orrery of planets circling a little sun, black-light tubes, a telescope, an armillary sphere, a star rug, starry shelves and a floor pallet, each with a **working storage label**.
 - It is lit like a black-light room: every parcel inside goes dark, and otherworldly parcels' white parts (tape, edges, name labels) and stickers fluoresce.
 
+### The longer pile corridor
+- The mail pile no longer turns bottomless at the break room. The corridor now carries on 11 m past its old end wall, and the pile keeps receding through **five more stages** (copies of the game's own stages, 90 parcels each) before the bottomless pile takes over at the new end.
+- The new stretch is built from slices of the game's own corridor meshes (baked lighting included, `Content/PileWing.cs`), so it reads as the same hallway. The old end frame, panel and end wall move to the new end.
+- Two new rooms open off it, with staggered doors: the **gift wrapping room** on the right (its door clears at the fifth new stage) and the **mirror room** further down on the left (its door clears when the pile turns bottomless).
+- Saves that had already reached the bottomless pile carry on from the first new stage.
+
+### Spectral parcels and the mirror room
+- Marked with a ghost-parcel sticker and their own scanner glyph. They start arriving (pile, boat, customer drop-offs) once the mirror room opens.
+- Anywhere but the mirror room they flicker and fade from sight: only their stamps, stickers and name label stay visible (aiming at one still shows its outline). No damage, just a harder find.
+- The mirror room is plum and gold, with a chandelier, velvet curtains, a vanity, wooden shelves with working labels and a floor pallet. Its two gilded mirrors are real mirrors (each drawn by a camera at the viewer's reflection, only while visible), and they show spectral parcels wherever they are.
+
+### Gift wrapping
+- Once the gift wrapping room opens, 2–4 extra **gift customers** come to the counter each shift, on top of the shift's normal customers (they never count towards it). Each hands over a present and asks for its wrapping in a riddle ("Wrap it in whatever a cat dreams about at night. Tie it with a ribbon the colour of forget-me-nots."). The same riddle is written on the **gift tag** on top of the parcel.
+- Eight papers (starry night, candy stripes, pink polka dots, flowers, fish, tartan, paw prints, gold foil, painted locally with FLUX.2 [klein], `Tools/gen_gift_papers.sh`) hang on the pegboard above the wrapping bench, and six ribbon spools (the game's red, yellow and blue plus green, purple and pink) on the dowel above them.
+- Put the gift on the bench (or just hold it) and **click a paper roll**, then **a ribbon spool**. Re-click to change your mind. The ribbon is the game's own parcel ribbon; stamps, stickers and the name label stay on top of the paper.
+- Shelve the gift. When the person it's for comes for it, they describe the wrapping they were promised, and react when you hand it over. Right paper and ribbon score the most, one of the two scores less, and an unwrapped gift costs points. The result is a **"Gifts delivered"** line on the shift summary and counts towards the post office's level.
+
+### Customers
+- Customers requesting scented/restless/otherworldly/spectral parcels describe them with new lines ("My package smells like strawberries…", "I ordered a box of jumping beans. Please tell me you played them some music."), including mood variants.
+- Customers dropping off a parcel of a mod type usually mention what it is ("It smells of strawberries, so maybe keep it outside").
+- 28 riddle-style descriptions join the game's own pools for native features ("My parcel is shy. It hides from the light, like a cat under the bed."), so finding parcels sometimes takes a little decoding.
+- All 13 game languages are included.
+
 ### Outdoor yard
 - Built behind the storage corridor's service door (the one that never opened): a wooden pier deck over the water with railings, a striped awning, string lights, planters (strawberries!), a banana plant, a lamp post, a "Fresh Air Storage" sign and three storage shelves.
 - The door stays shut until the yard unlocks, then swings open.
@@ -32,11 +55,8 @@ A MelonLoader mod for **Cat Mail Co.** that adds three new parcel types, an outd
 - Two wooden speakers play the game's own music tracks (the regular background music ducks while you're inside) and gently bounce to the beat. A "Music Room" poster goes up.
 - The empty tuna cans become carryable: throw them in the new trash can by the door. Each bookshelf/pantry compartment becomes parcel storage once its cans are gone ("Shelf cleared!").
 
-### Customers
-- Customers requesting scented/restless parcels describe them with new lines ("My package smells like strawberries…", "I ordered a box of jumping beans. Please tell me you played them some music."), including mood variants. All 13 game languages are included.
-
 ### Unlocks
-- Both unlocks show the game's own notification and, when earned during play, the end-of-shift "unlocked" card.
+- Every unlock shows the game's own notification and, when earned during play, the end-of-shift "unlocked" card.
 
 ## Installing
 1. Install MelonLoader 0.7.x for the game (already installed here).
@@ -63,9 +83,12 @@ MelonLoader 0.7.3's macOS build is x64-only and needs some workarounds, all in `
 
 ## Notes and limitations
 - New parcel types are stored as new values of the game's storage-constraint field, so they save, load and sync like native types. **Remove the mod only after a save made with `PrepareUninstall = true`**; otherwise the vanilla game can't describe those parcels.
-- Multiplayer: every player needs the mod. Restless hopping physics run on the host.
+- Multiplayer: every player needs the mod. Restless hopping physics run on the host. Gift customers, wrapping and gift scoring also run on the host (untested with clients).
+- Every new type arrives through the game's own property roll: pile parcels, boat cargo and customer drop-offs all roll their storage constraint from the unlocked list, so mod types show up in all three once unlocked.
 - Scented and restless parcels are excluded from the game's recap damage check (their consequences are the fog and hopping). Otherworldly parcels use it: outside the planetarium the check sees a native constraint no room around them protects.
 - The doorway into the planetarium is cut out of the corridor's wall mesh at runtime (`Core/MeshCutter.cs` reads the GPU-only mesh back and clips the triangles).
+- The wrapping papers and the spectral sticker were painted with FLUX.2 [klein] 4B (Apache 2.0) through mflux (`Tools/gen_gift_papers.sh`, `Tools/gen_spectral_sticker.sh`); `Tools/make_expansion_textures.py` makes the papers tile and draws the stickers, tag and signs. The gift room rug was painted with Qwen-Image-Edit 2511 and its 4-step Lightning LoRA from a flat layout (`Tools/gen_gift_rug.sh`).
+- Saves from earlier builds with Catazon return items load fine: those items become ordinary parcels.
 - The planetarium's sky and sticker art were painted with Bria Fibo 2.0 (local, `Tools/gen_planetarium_art.sh`); its open weights are CC BY-NC 4.0, so check Bria's licence before any commercial use of those two images.
 
 ## Project layout
@@ -98,5 +121,5 @@ cd src/CatMailExpanded
 dotnet build -c Release
 ```
 The build copies the DLL into the game's `Mods` folder (`-p:Deploy=false` to skip). Rebuild models with e.g.
-`blender -b --factory-startup --python Art/Blender/yard.py -- all` (also `planetarium.py`, `front.py`), and the planetarium textures with `python3 -I Tools/make_planetarium_textures.py`.
+`blender -b --factory-startup --python Art/Blender/yard.py -- all` (also `planetarium.py`, `front.py`, `mirror.py`, `gifts.py`, `roof.py`), and the planetarium textures with `python3 -I Tools/make_planetarium_textures.py`.
 On macOS, `Tools/macos/game.sh` drives the game like `Tools/game.sh` does on Windows, and `Tools/macos/load_test_save.sh` restarts it into the first save slot.

@@ -263,7 +263,7 @@ namespace CatMailExpanded.Content
         }
 
         /// <summary>The copied shelves are lit like the corridor; tone them down to the room's starlight.</summary>
-        static void DimShelf(GameObject unit)
+        internal static void DimShelf(GameObject unit)
         {
             var mpb = new MaterialPropertyBlock();
             int lit = Shader.PropertyToID("_DiffuseColor"), shade = Shader.PropertyToID("_DiffuseColor_1");
@@ -284,7 +284,7 @@ namespace CatMailExpanded.Content
         /// A real storage tag: the label entity players click to pick an icon. It gets its own permanent identifier
         /// so the chosen icon saves and syncs like the game's own tags.
         /// </summary>
-        static void CloneLabel(GameObject source, Transform parent, Vector3 pos, float yaw, int idOffset)
+        internal static void CloneLabel(GameObject source, Transform parent, Vector3 pos, float yaw, int idOffset)
         {
             if (!source) { _log.Add("no storage tag template"); return; }
             var holder = new GameObject("CME_LabelHolder");

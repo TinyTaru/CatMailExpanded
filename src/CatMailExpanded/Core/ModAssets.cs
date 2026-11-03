@@ -165,6 +165,23 @@ namespace CatMailExpanded.Core
         /// URP Unlit material: self-lit surfaces (sky, planets, glowing tubes) or, with additive, glow overlays.
         /// Colours above 1 feed the game's bloom.
         /// </summary>
+        /// <summary>See-through (alpha blended) unlit material, e.g. bubble wrap.</summary>
+        public static Material TransparentMaterial(string name, Texture texture, Color color)
+        {
+            var m = UnlitMaterial(name, texture, color);
+            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_SrcBlend", 5f);          // SrcAlpha
+            m.SetFloat("_DstBlend", 10f);         // OneMinusSrcAlpha
+            m.SetFloat("_SrcBlendAlpha", 1f);
+            m.SetFloat("_DstBlendAlpha", 10f);
+            m.SetFloat("_ZWrite", 0f);
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.renderQueue = 3000;
+            return m;
+        }
+
         public static Material UnlitMaterial(string name, Texture texture, Color color, bool additive = false)
         {
             if (!_unlit)

@@ -71,6 +71,8 @@ namespace CatMailExpanded.Content
                 {
                     float x = x0 + i * step, z = z0 + j * step;
                     if (x > -2.6f && x < 4.6f && z > 20.4f && z < 27.8f) h[j * nx + i] = Mathf.Min(h[j * nx + i], -0.35f);
+                    // and from under the extended pile corridor, the mirror room and the returns room
+                    if (UnderNewWing(x, z, 0.8f)) h[j * nx + i] = Mathf.Min(h[j * nx + i], -0.35f);
                 }
             int cells = (nx - 1) * (nz - 1);
             var cellData = br.ReadBytes(cells * 3);
@@ -213,6 +215,12 @@ namespace CatMailExpanded.Content
             src.enabled = false;
         }
 
+        /// <summary>The footprint of the extended pile corridor and its two wings, grown by a margin.</summary>
+        static bool UnderNewWing(float x, float z, float m) =>
+            (x > MirrorRoom.OX0 - m && x < PileWing.CX1 + m && z > MirrorRoom.OZ0 - m && z < MirrorRoom.OZ1 + m)
+            || (x > PileWing.CX0 - m && x < PileWing.CX1 + m && z > PileWing.OldEnd - m && z < PileWing.End + m)
+            || (x > PileWing.RX0 - m && x < PileWing.RX1 + m && z > PileWing.RZ0 - m && z < PileWing.RZ1 + m);
+
         static void HideOldSeabed()
         {
             foreach (var name in new[] { "BottomOutside", "BottomInside" })
@@ -239,6 +247,7 @@ namespace CatMailExpanded.Content
                 float F(int i) => float.Parse(p[i], CultureInfo.InvariantCulture);
                 // nothing grows where the planetarium wing stands
                 if (F(1) > -3.4f && F(1) < 5f && F(3) > 19.9f && F(3) < 28.6f) continue;
+                if (UnderNewWing(F(1), F(3), 2.6f)) continue;
                 try
                 {
                     var go = ModAssets.Prop("syn_" + p[0], "tex_synty_adventure", holder,

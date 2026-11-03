@@ -48,7 +48,7 @@ namespace CatMailExpanded.Patches
                 }
             }
 
-            if (kind == ModKind.None)
+            if (kind == ModKind.None || ParcelKinds.IsReturn(kind))
             {
                 if (_original && renderer.sharedMaterial != _original) renderer.sharedMaterial = _original;
                 return;
@@ -75,6 +75,8 @@ namespace CatMailExpanded.Patches
                 ModKind.Strawberry => "scan_strawberry",
                 ModKind.Banana => "scan_banana",
                 ModKind.Otherworldly => "scan_otherworldly",
+                ModKind.Spectral => "scan_spectral",
+                ModKind.Gift or ModKind.GiftWrapped => "scan_gift",
                 _ => "scan_restless",
             });
             tex.wrapMode = TextureWrapMode.Clamp;

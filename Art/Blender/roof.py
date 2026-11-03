@@ -31,7 +31,14 @@ BLOCKS = {
     'south':  dict(rect=(-2.41, -7.13, 7.67, 3.87), base=4.80, kind='hip', pitch=30, fill=3.95),
     'centre': dict(rect=(1.21, 1.22, 11.29, 15.66), base=4.22, kind='hip', pitch=30),
     'east':   dict(rect=(7.57, -0.69, 17.65, 10.31), base=4.22, kind='hip', pitch=30),
-    'north':  dict(rect=(4.52, 15.66, 12.40, 30.10), base=4.22, kind='hip', pitch=30),
+    # the pile corridor and break room, carried on over the Catazon returns room (PileWing.cs)
+    'north':  dict(rect=(4.52, 15.66, 12.40, 33.78), base=4.22, kind='hip', pitch=30),
+    # the corridor's new stretch beyond the returns room, out to its new end wall
+    'tail':   dict(rect=(4.18, 33.78, 7.94, 38.55), base=4.22, kind='hip', pitch=30),
+    # the mirror room (MirrorRoom.cs / mirror.py): its walls stop at 3.8, so clad up to the roof
+    'mirror': dict(rect=(-1.85, 27.15, 4.52, 36.70), base=4.12, kind='hip', pitch=30, fill=3.95),
+    # the planetarium has its own flat roof and dome: listed only so nothing overhangs it
+    'planetarium': dict(rect=(-1.8, 21.0, 4.43, 27.1), base=4.1, kind='none', pitch=30),
     'porch':  dict(rect=(7.16, -2.66, 13.38, -0.02), base=4.22, kind='hip', pitch=30),
     # the customer room has no light blocker; its solid wood ceiling tops out at 4.49, so start just above it.
     # (The hot room is left open on purpose: its skylights should keep showing the sky.)
@@ -374,6 +381,8 @@ def add_trim(name, rectx, planes, o):
 def build():
     C.reset_scene()
     for name in BLOCKS:
+        if BLOCKS[name]['kind'] == 'none':
+            continue
         rectx, planes, o = add_roof(name)
         add_trim(name, rectx, planes, o)
         add_fill(name, o)

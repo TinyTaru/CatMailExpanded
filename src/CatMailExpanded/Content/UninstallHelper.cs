@@ -16,6 +16,12 @@ namespace CatMailExpanded.Content
                 props._StorageConstraint_k__BackingField = StorageConstraint.None;
                 n++;
             }
+            // the game only knows three ribbon colours: the gift room's other three become red
+            foreach (var p in Object.FindObjectsByType<EntityParcel>(FindObjectsSortMode.None))
+            {
+                var props = p.Properties;
+                if (props != null && (int)props._RibbonColor_k__BackingField > 3) props._RibbonColor_k__BackingField = ParcelRibbonColor.Red;
+            }
             // Shelves added by the mod disappear without it: take parcels off them and set them down indoors.
             int moved = 0;
             var drop = new Vector3(3.2f, 0.3f, 11.5f);
