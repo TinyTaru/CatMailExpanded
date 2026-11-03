@@ -17,7 +17,7 @@ namespace CatMailExpanded.Content
         const float DoorHingeZ = 0.84f + 0.18f;
         const float DoorX = -2.25f;
         static readonly Vector3 RingPos = new(-2.70f, 1.35f, -6.0f);   // flat on the facade siding, clear of the crates
-        const float RingYaw = 270f;
+        const float RingYaw = 0f;   // nail against the siding
         static readonly Vector3 GarlandPos = new(-10.75f, 2.25f, -2.6f);
         static readonly float[] PoleX = { -12.33f, -8.99f, -5.76f };
         const float PoleZ = -4.0f;
@@ -93,8 +93,12 @@ namespace CatMailExpanded.Content
             // --- shelves under the pergola: native dock shelf visuals + cloned storage grids
             var shelfTemplate = World.Find("p_Shelves_M (3)", "p_Dock") ?? World.Find("p_Shelves_M");
             int id = 0;
+            // storage tags (clickable picture labels) cloned from the dock bookcase's own tag
+            var tagTemplate = World.Find("prop_StorageTag_Right (5)", "p_Dock") ?? World.Find("prop_StorageTag_Right");
+            int labelId = 0;
             // bookcases packed together (ids 917000.. stay in this order so stored parcels follow their shelf)
-            foreach (var sx in new[] { -10.63f, -8.58f, -6.53f })
+            var shelfX = new[] { -10.63f, -8.58f, -6.53f };
+            foreach (var sx in shelfX)
                 BuildShelf(shelfTemplate, t, new Vector3(sx, 0.04f, 2.12f), 0f, ref id);
             // the repair room's open rack, west of the bookcases with its back against the dock wall
             var rackTemplate = World.Find("p_Shelves_L (1)", "p_AdditionalStorageRoom") ?? World.Find("p_Shelves_L");
@@ -102,13 +106,15 @@ namespace CatMailExpanded.Content
             const float rackYaw = 90f;
             var rackPos = new Vector3(-12.4f, 0.04f, 1.87f);   // west end of the row
             BuildShelf(rackTemplate, t, rackPos, rackYaw, ref id);
-            // the tag, offset and turned with the rack exactly as in the repair room (rack yaw 180, tag yaw 0 there)
-            var tag = World.Find("prop_StorageTag_Right (2)");
-            var tagCopy = tag ? World.CopyVisual(tag, t, Vector3.zero, 0f, 1f, false) : null;
-            if (tagCopy)
-                tagCopy.transform.SetPositionAndRotation(
-                    rackPos + Quaternion.Euler(0, rackYaw, 0) * new Vector3(0.5f, 2.29f, 0.55f),
-                    Quaternion.Euler(0, rackYaw - 180f, 0));
+            // the rack's tag, offset and turned with the rack exactly as in the repair room (rack yaw 180, tag yaw 0 there)
+            StoreFactory.CreateLabel(tagTemplate, t,
+                rackPos + Quaternion.Euler(0, rackYaw, 0) * new Vector3(0.5f, 2.29f, 0.55f),
+                Quaternion.Euler(0, rackYaw - 180f, 0), labelId++);
+            // each bookcase's tag on its top front corner, as on the dock (bookcase yaw 180, tag yaw 90 there)
+            foreach (var sx in shelfX)
+                StoreFactory.CreateLabel(tagTemplate, t,
+                    new Vector3(sx, 0.04f, 2.12f) + new Vector3(0.79f, 2.27f, -0.25f),
+                    Quaternion.Euler(0, 270f, 0), labelId++);
 
             // --- decoration borrowed from the dock (visual copies only)
             var crate = World.Find("prop_Dock_Crate_Small");
@@ -116,7 +122,8 @@ namespace CatMailExpanded.Content
             World.CopyVisual(crate, t, new Vector3(-3.3f, 0.03f, -5.5f), -10);
             var buoy = World.Find("prop_Dock_Buoy");
             // hung on the lavender facade wall above the crates, facing the yard
-            var ring = World.CopyVisual(buoy, t, RingPos, RingYaw, 1f, false);
+            // copied unrotated and turned once on the root (turning both doubled the yaw)
+            var ring = World.CopyVisual(buoy, t, RingPos, 0f, 1f, false);
             if (ring)
             {
                 ring.name = "CME_LifeRing";

@@ -57,5 +57,28 @@ namespace CatMailExpanded.Content
             UnityEngine.Object.Destroy(holder);
             return store;
         }
+
+        /// <summary>Label ids: the game saves a label's picture under "StorageLabel:{id};SpriteIndex".</summary>
+        public const int LabelIdBase = IdBase + 900;
+
+        /// <summary>
+        /// Clones a whole storage tag prop (bracket mesh + the clickable picture label) at a world pose,
+        /// giving the label a stable identifier so its chosen picture saves and reloads.
+        /// </summary>
+        public static GameObject CreateLabel(GameObject template, Transform parent, Vector3 pos, Quaternion rot, int idOffset)
+        {
+            if (!template) return null;
+            var holder = new GameObject("CME_LabelHolder");
+            holder.SetActive(false);   // keep Start from reading the save before the id is set
+            var clone = UnityEngine.Object.Instantiate(template, holder.transform);
+            int id = LabelIdBase + idOffset;
+            clone.name = $"CME_Label_{id}";
+            foreach (var pid in clone.GetComponentsInChildren<EntityPermanentIdentifier>(true))
+                pid._PermanentIdentifier_k__BackingField = id;
+            clone.transform.SetParent(parent, false);
+            clone.transform.SetPositionAndRotation(pos, rot);
+            UnityEngine.Object.Destroy(holder);
+            return clone;
+        }
     }
 }
