@@ -9,7 +9,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
-    <GameDir Condition="'$(GameDir)'==''">C:\Program Files (x86)\Steam\steamapps\common\CatMailCo</GameDir>
+    <GameDir Condition="'$(GameDir)'=='' And '$(OS)'=='Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\CatMailCo</GameDir>
+    <GameDir Condition="'$(GameDir)'==''">/Applications/CatMailCo LAN</GameDir>
     <MLDir>$(GameDir)\MelonLoader</MLDir>
     <NoWarn>CS0618;CS8632</NoWarn>
   </PropertyGroup>

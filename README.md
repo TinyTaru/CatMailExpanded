@@ -34,6 +34,15 @@ A MelonLoader mod for **Cat Mail Co.** that adds two new parcel types, an outdoo
 1. Install MelonLoader 0.7.x for the game (already installed here).
 2. Copy `CatMailExpanded.dll` into the game's `Mods` folder.
 
+### macOS (Apple Silicon, `CatMailCo LAN.app`)
+MelonLoader 0.7.3's macOS build is x64-only and needs some workarounds, all in `Tools/macos`:
+- The game lives in its own folder, `/Applications/CatMailCo LAN/CatMailCo LAN.app`. MelonLoader puts its files next to the `.app`, and its installer rejects a folder holding more than one `.app`, so it can't sit directly in `/Applications`.
+- Next to the `.app`: the contents of `MelonLoader.macOS.x64.zip`, an x64 .NET 6 runtime in `dotnet-x64/` (set as `hostfxr_path_override` in `UserData/Loader.cfg`), `MelonPltFix.dylib` (built from `MelonPltFix.c`, see its header) and `Launch CatMailCo (Mods).command`.
+- Start the modded game with `Launch CatMailCo (Mods).command`; it runs the game under Rosetta with MelonLoader injected. Opening the `.app` directly starts the unmodded game.
+- `MelonPltFix.dylib` fixes three MelonLoader bugs on this build: its `dlsym` hook misses UnityPlayer (black screen forever), the managed module list treats the first injected library as the game, and GameAssembly's module size overshoots into unmapped memory (crash in Il2CppInterop's signature scan).
+- Cpp2IL can't read the universal `GameAssembly.dylib` ("Stream does not support writing"). After a game update, regenerate the assemblies against an x86_64-only copy: `lipo -thin x86_64` the original to a new file and `mv` it into place, launch once, then put the universal file back the same way (a new file plus `mv`; overwriting the signed file in place makes Unity fail with "Failed to load il2cpp"). Finally set `GameAssemblyHash` in `MelonLoader/Dependencies/Il2CppAssemblyGenerator/Config.cfg` to its uppercase SHA-512.
+- MelonLoader's own `NativeHook` API and ICall injector fail on macOS (ClrMD snapshot unsupported). Harmony patches on game methods are unaffected.
+
 ## Settings (`UserData/MelonPreferences.cfg`, section `[CatMailExpanded]`)
 | Setting | Default | Meaning |
 |---|---|---|
