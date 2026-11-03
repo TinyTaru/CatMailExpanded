@@ -37,7 +37,23 @@ BLOCKS = {
     # (The hot room is left open on purpose: its skylights should keep showing the sky.)
     'customer':  dict(rect=(17.65, -0.78, 20.06, 13.35), base=4.52, kind='hip', pitch=30, fill=3.95),
     'customer2': dict(rect=(13.28, 10.31, 17.65, 13.35), base=4.52, kind='hip', pitch=30, fill=3.95),
+    # no light blocker over the workstations room's east end (where the map hangs) or the storage room behind
+    # it; without a roof of their own the neighbours' eaves hung down through those ceilings (top 4.49)
+    'storage':   dict(rect=(11.29, 10.31, 13.43, 17.98), base=4.52, kind='hip', pitch=30, fill=3.95),
 }
+# skylit rooms that stay unroofed (x0, z0, x1, z1 of their ceilings): they get no roof, but count as neighbours,
+# so no eave hangs in over them (their ceilings are lower than the neighbouring eaves)
+OPEN = {
+    'hot':      (-2.22, 15.70, 4.56, 20.47),
+    'bright':   (-11.32, 16.88, -4.42, 21.50),
+    'smallcor': (-4.42, 17.56, -2.22, 20.47),   # down to the dock's north wall
+}
+
+
+def neighbour_rects(name):
+    return [b['rect'] for n, b in BLOCKS.items() if n != name] + list(OPEN.values())
+
+
 # walls the yard facade already finishes (its own trim sits at the wall top): no overhang there
 NO_OVERHANG = set()   # the south roof starts above the facade top, so its overhang clears the facade
 
@@ -222,12 +238,12 @@ def exposed_spans(name, edge, grow=0.0):
     if edge in ('W', 'E'):
         a, b = z0, z1
         strip = (x0 - 0.3, x0 - 0.01) if edge == 'W' else (x1 + 0.01, x1 + 0.3)
-        cover = [(r[1], r[3]) for n, bl in BLOCKS.items() if n != name for r in [bl['rect']]
+        cover = [(r[1], r[3]) for r in neighbour_rects(name)
                  if r[0] < strip[1] and strip[0] < r[2]]
     else:
         a, b = x0, x1
         strip = (z0 - 0.3, z0 - 0.01) if edge == 'S' else (z1 + 0.01, z1 + 0.3)
-        cover = [(r[0], r[2]) for n, bl in BLOCKS.items() if n != name for r in [bl['rect']]
+        cover = [(r[0], r[2]) for r in neighbour_rects(name)
                  if r[1] < strip[1] and strip[0] < r[3]]
     spans = [(a, b)]
     cover = [(c0 - grow, c1 + grow) for c0, c1 in cover]
@@ -242,7 +258,7 @@ def exposed_spans(name, edge, grow=0.0):
             if c1 < s1:
                 nxt.append((c1, s1))
         spans = nxt
-    return [(s0, s1) for s0, s1 in spans if s1 - s0 > 0.05]
+    return [(s0, s1) for s0, s1 in spans if s1 - s0 > 0.15]   # shorter bits would only sit inside walls
 
 
 def add_fill(name, o):
