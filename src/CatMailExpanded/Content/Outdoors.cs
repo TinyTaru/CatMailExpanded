@@ -65,6 +65,13 @@ namespace CatMailExpanded.Content
             float x0 = br.ReadSingle(), z0 = br.ReadSingle(), step = br.ReadSingle();
             var h = new float[nx * nz];
             for (int k = 0; k < h.Length; k++) h[k] = br.ReadSingle();
+            // the planetarium wing stands on what was a grassy slope: dig the ground out from under it
+            for (int j = 0; j < nz; j++)
+                for (int i = 0; i < nx; i++)
+                {
+                    float x = x0 + i * step, z = z0 + j * step;
+                    if (x > -2.6f && x < 4.6f && z > 20.4f && z < 27.8f) h[j * nx + i] = Mathf.Min(h[j * nx + i], -0.35f);
+                }
             int cells = (nx - 1) * (nz - 1);
             var cellData = br.ReadBytes(cells * 3);
             int kept = 0;
@@ -230,6 +237,8 @@ namespace CatMailExpanded.Content
                 var p = line.Split(' ');
                 if (p.Length < 6) continue;
                 float F(int i) => float.Parse(p[i], CultureInfo.InvariantCulture);
+                // nothing grows where the planetarium wing stands
+                if (F(1) > -3.4f && F(1) < 5f && F(3) > 19.9f && F(3) < 28.6f) continue;
                 try
                 {
                     var go = ModAssets.Prop("syn_" + p[0], "tex_synty_adventure", holder,

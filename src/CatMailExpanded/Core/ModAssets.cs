@@ -159,6 +159,37 @@ namespace CatMailExpanded.Core
             return go;
         }
 
+        static Shader _unlit;
+
+        /// <summary>
+        /// URP Unlit material: self-lit surfaces (sky, planets, glowing tubes) or, with additive, glow overlays.
+        /// Colours above 1 feed the game's bloom.
+        /// </summary>
+        public static Material UnlitMaterial(string name, Texture texture, Color color, bool additive = false)
+        {
+            if (!_unlit)
+                foreach (var s in Resources.FindObjectsOfTypeAll<Shader>())
+                    if (s.name == "Universal Render Pipeline/Unlit") { _unlit = s; break; }
+            var m = new Material(_unlit) { name = "CME_" + name };
+            if (texture) m.SetTexture("_BaseMap", texture);
+            m.SetColor("_BaseColor", color);
+            if (additive)
+            {
+                m.SetFloat("_Surface", 1f);
+                m.SetFloat("_Blend", 2f);
+                m.SetFloat("_SrcBlend", 1f);
+                m.SetFloat("_DstBlend", 1f);
+                m.SetFloat("_SrcBlendAlpha", 0f);
+                m.SetFloat("_DstBlendAlpha", 1f);
+                m.SetFloat("_ZWrite", 0f);
+                m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                m.SetOverrideTag("RenderType", "Transparent");
+                m.renderQueue = 3050;
+            }
+            m.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return m;
+        }
+
         public static void ClearSceneCaches()
         {
             _propTemplate = null;

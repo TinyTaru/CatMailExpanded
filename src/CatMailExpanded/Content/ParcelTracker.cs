@@ -33,6 +33,7 @@ namespace CatMailExpanded.Content
             public Vector3 StampsRestPos;
             public Quaternion StampsRestRot;
             public bool StampsMoved;
+            public readonly BlackLight.State Light = new();
         }
 
         static readonly Dictionary<IntPtr, Tracked> _tracked = new();
@@ -78,6 +79,7 @@ namespace CatMailExpanded.Content
             _stickerTemplate = null;
             _stickerQuad = null;
             _stickerMats.Clear();
+            BlackLight.Clear();
         }
 
         static bool IsServer => NetworkManager.Instance == null || NetworkManager.Instance.IsServer;
@@ -111,7 +113,9 @@ namespace CatMailExpanded.Content
                     if (t.Kind != ModKind.None && ParcelKinds.IsScented(t.Kind))
                         fogCandidates.Add(((p.transform.position - cam).sqrMagnitude, t));
                     if (t.Kind == ModKind.Restless) RestlessLogic(t, now);
+                    BlackLight.Logic(p, t.Light, t.Kind == ModKind.Otherworldly);
                 }
+                BlackLight.Animate(t.Light, t.Kind == ModKind.Otherworldly, dt);
                 if (t.Kind == ModKind.Restless) AnimateWiggle(t, now);
                 if (t.Fog != null)
                 {
@@ -178,6 +182,7 @@ namespace CatMailExpanded.Content
         static void SetKind(Tracked t, ModKind kind)
         {
             RestoreStamps(t);
+            BlackLight.Release(t.Light);
             t.Kind = kind;
             if (t.Sticker) UnityEngine.Object.Destroy(t.Sticker);
             t.Sticker = null;

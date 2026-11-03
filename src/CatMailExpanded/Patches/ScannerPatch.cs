@@ -74,6 +74,7 @@ namespace CatMailExpanded.Patches
             {
                 ModKind.Strawberry => "scan_strawberry",
                 ModKind.Banana => "scan_banana",
+                ModKind.Otherworldly => "scan_otherworldly",
                 _ => "scan_restless",
             });
             tex.wrapMode = TextureWrapMode.Clamp;
