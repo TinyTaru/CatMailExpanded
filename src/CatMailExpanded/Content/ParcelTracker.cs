@@ -33,6 +33,8 @@ namespace CatMailExpanded.Content
             public Vector3 StampsRestPos;
             public Quaternion StampsRestRot;
             public bool StampsMoved;
+            public readonly BlackLight.State Light = new();
+            public readonly Spectral.State Ghost = new();
         }
 
         static readonly Dictionary<IntPtr, Tracked> _tracked = new();
@@ -59,6 +61,18 @@ namespace CatMailExpanded.Content
             return sb.ToString();
         }
 
+        /// <summary>The gifts (wrapped or not) currently in the world.</summary>
+        public static IEnumerable<EntityParcel> Gifts()
+        {
+            foreach (var t in _tracked.Values)
+            {
+                if (!ParcelKinds.IsGift(t.Kind)) continue;
+                bool alive;
+                try { alive = t.Parcel != null && t.Parcel && !t.Parcel.IsDisposed; } catch { alive = false; }
+                if (alive) yield return t.Parcel;
+            }
+        }
+
         public static void Register(EntityParcel parcel)
         {
             if (parcel == null) return;
@@ -78,6 +92,7 @@ namespace CatMailExpanded.Content
             _stickerTemplate = null;
             _stickerQuad = null;
             _stickerMats.Clear();
+            BlackLight.Clear();
         }
 
         static bool IsServer => NetworkManager.Instance == null || NetworkManager.Instance.IsServer;
@@ -111,7 +126,13 @@ namespace CatMailExpanded.Content
                     if (t.Kind != ModKind.None && ParcelKinds.IsScented(t.Kind))
                         fogCandidates.Add(((p.transform.position - cam).sqrMagnitude, t));
                     if (t.Kind == ModKind.Restless) RestlessLogic(t, now);
+                    BlackLight.Logic(p, t.Light, t.Kind == ModKind.Otherworldly);
+                    Spectral.Logic(p, t.Ghost, t.Kind == ModKind.Spectral, now);
+                    if (ParcelKinds.IsGift(t.Kind)) GiftRoom.ItemLogic(p, t.Kind);
+                    else if (ParcelKinds.IsReturn(t.Kind)) GiftRoom.MigrateReturn(p);
                 }
+                BlackLight.Animate(t.Light, t.Kind == ModKind.Otherworldly, dt);
+                Spectral.Animate(t.Ghost, t.Kind == ModKind.Spectral, dt, now);
                 if (t.Kind == ModKind.Restless) AnimateWiggle(t, now);
                 if (t.Fog != null)
                 {
@@ -178,6 +199,9 @@ namespace CatMailExpanded.Content
         static void SetKind(Tracked t, ModKind kind)
         {
             RestoreStamps(t);
+            BlackLight.Release(t.Light);
+            Spectral.Release(t.Ghost);
+            if (ParcelKinds.IsGift(t.Kind) && !ParcelKinds.IsGift(kind)) GiftRoom.ReleaseItem(t.Parcel);
             t.Kind = kind;
             if (t.Sticker) UnityEngine.Object.Destroy(t.Sticker);
             t.Sticker = null;

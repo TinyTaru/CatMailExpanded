@@ -7,6 +7,11 @@ namespace CatMailExpanded.Content
         {
             Outdoors.Build();
             Yard.Build();
+            FrontPath.Build();
+            Planetarium.Build();
+            PileWing.Build();
+            MirrorRoom.Build();
+            GiftRoom.Build();
             SpeakerRoom.BuildStores();
         }
     }

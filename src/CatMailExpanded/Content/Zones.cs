@@ -22,7 +22,11 @@ namespace CatMailExpanded.Content
         // Break room interior (measured from p_BreakRoom renderer bounds).
         public static readonly Box BreakRoom = new(new Vector3(7.65f, -0.5f, 17.6f), new Vector3(12.8f, 4.6f, 26.3f));
 
+        // Planetarium interior, up to the corridor wall (see Planetarium.cs).
+        public static readonly Box Planetarium = new(new Vector3(-1.6f, -0.5f, 21.2f), new Vector3(4.45f, 6.6f, 26.9f));
+
         public static bool InYard(Vector3 p) => Yard.Contains(p);
+        public static bool InPlanetarium(Vector3 p) => Planetarium.Contains(p);
         public static bool InBreakRoom(Vector3 p) => BreakRoom.Contains(p);
     }
 }

@@ -61,8 +61,10 @@ namespace CatMailExpanded.Patches
     }
 
     /// <summary>
-    /// The new types have their own consequences (fog / hopping) instead of recap damage,
-    /// so hide their constraint value from the native storage damage check.
+    /// Scented and restless parcels have their own consequences (fog / hopping) instead of recap damage, so their
+    /// constraint value is hidden from the native storage damage check. Otherworldly parcels are damaged the way
+    /// cold parcels are: inside the planetarium the check sees no constraint, anywhere else it sees a native
+    /// constraint that no room the parcel is in protects, so the game's own rules (timing, boat, piles) decide.
     /// </summary>
     [HarmonyPatch(typeof(EntityProperties), nameof(EntityProperties.CheckForParcelDamage))]
     static class EntityProperties_CheckForParcelDamage
@@ -70,8 +72,19 @@ namespace CatMailExpanded.Patches
         static void Prefix(EntityProperties __instance, out StorageConstraint __state)
         {
             __state = __instance._StorageConstraint_k__BackingField;
-            if (ParcelKinds.IsModValue(__state))
-                __instance._StorageConstraint_k__BackingField = StorageConstraint.None;
+            if (!ParcelKinds.IsModValue(__state)) return;
+            __instance._StorageConstraint_k__BackingField =
+                __state == ParcelKinds.Otherworldly ? OtherworldlyStandIn(__instance) : StorageConstraint.None;
+        }
+
+        static StorageConstraint OtherworldlyStandIn(EntityProperties props)
+        {
+            if (Zones.InPlanetarium(props.transform.position)) return StorageConstraint.None;
+            StorageConstraint safe = StorageConstraint.None;
+            try { foreach (var room in props._storageRoomsIn) if (room) safe |= room.SafeConstraints; } catch { }
+            foreach (var c in new[] { StorageConstraint.Cold, StorageConstraint.Hot, StorageConstraint.Dark, StorageConstraint.Bright })
+                if ((safe & c) == 0) return c;
+            return StorageConstraint.Cold;
         }
 
         static void Postfix(EntityProperties __instance, StorageConstraint __state)

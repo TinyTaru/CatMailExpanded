@@ -293,7 +293,10 @@ def bake_textures(obj, out_png, size=1024, ao_strength=0.55, margin=8, top_light
 def render_preview(obj, out_png, texture_png=None, res=640, angle=(62, 0, 38), frame=None):
     """Quick EEVEE render of the object (optionally with the baked texture applied) for review."""
     scene = bpy.context.scene
-    scene.render.engine = 'BLENDER_EEVEE_NEXT'
+    try:
+        scene.render.engine = 'BLENDER_EEVEE_NEXT'
+    except TypeError:
+        scene.render.engine = 'BLENDER_EEVEE'
     scene.view_settings.view_transform = 'Standard'
     scene.render.resolution_x = res
     scene.render.resolution_y = res

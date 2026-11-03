@@ -133,7 +133,8 @@ namespace CatMailExpanded.Content
             var rock = World.Find("prop_Rock_04 (1)", "p_Outside");
             if (rock) rock.transform.position += new Vector3(-1.6f, 0f, 0f);
             var rope = World.Find("prop_Dock_Rope");
-            World.CopyVisual(rope, t, new Vector3(-4.1f, 0.03f, -8.1f), 40);
+            // coiled against the facade between the palm and the crates, clear of the garden gate
+            World.CopyVisual(rope, t, new Vector3(-3.35f, 0.03f, -4.45f), 40);
             // potted palm on the east side (clear of the crates and the door swing), watering can between the planters
             var palm = World.Mesh("syn_palm", "tex_synty_gang", t, new Vector3(-3.3f, 0.03f, -3.2f), 20);
             palm.transform.localScale = Vector3.one * 1.25f;
@@ -145,7 +146,7 @@ namespace CatMailExpanded.Content
 
             var plant = World.Find("p_Plant");
             World.CopyVisual(plant, t, new Vector3(-12.95f, 0.03f, -8.45f), 0);
-            World.CopyVisual(plant, t, new Vector3(-3.0f, 0.03f, -8.45f), 90);
+            World.CopyVisual(plant, t, new Vector3(-6.5f, 0.03f, -8.45f), 90);   // beside the planters, clear of the gate
 
             // --- lights: string lights under the pergola and the lamp post
             // festoon lights: the Bright Room's garland, strung from the pergola beam to three poles mid-deck.
@@ -161,9 +162,10 @@ namespace CatMailExpanded.Content
             Plugin.Log.Msg("Yard built");
         }
 
-        static void BuildShelf(GameObject template, Transform parent, Vector3 pos, float yaw, ref int id)
+        /// <summary>Copies a native shelf unit's visuals and colliders and clones its storage grids (ids from <paramref name="id"/>).</summary>
+        internal static GameObject BuildShelf(GameObject template, Transform parent, Vector3 pos, float yaw, ref int id, bool keepLightmap = false, bool nestedStores = false)
         {
-            if (!template) return;
+            if (!template) return null;
             var unit = new GameObject("CME_YardShelf");
             unit.transform.SetParent(parent, false);
             unit.transform.position = pos;
@@ -181,7 +183,14 @@ namespace CatMailExpanded.Content
                 v.transform.localRotation = mr.transform.localRotation;
                 v.transform.localScale = mr.transform.localScale;
                 v.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
-                v.AddComponent<MeshRenderer>().sharedMaterials = mr.sharedMaterials;
+                var copy = v.AddComponent<MeshRenderer>();
+                copy.sharedMaterials = mr.sharedMaterials;
+                if (keepLightmap && mr.lightmapIndex >= 0)
+                {
+                    // same mesh and UVs: reuse the original's baked lighting (the dark room's dim light)
+                    copy.lightmapIndex = mr.lightmapIndex;
+                    copy.lightmapScaleOffset = mr.lightmapScaleOffset;
+                }
             }
             var cols = template.transform.Find("Colliders");
             if (cols)
@@ -191,16 +200,26 @@ namespace CatMailExpanded.Content
                 c.transform.localPosition = cols.localPosition;
                 c.transform.localRotation = cols.localRotation;
             }
+            var stores = new System.Collections.Generic.List<Transform>();
             for (int i = 0; i < template.transform.childCount; i++)
             {
                 var child = template.transform.GetChild(i);
-                if (!child.GetComponent<EntityInteractableStore>()) continue;
-                var name = child.name;
+                if (child.GetComponent<EntityInteractableStore>()) stores.Add(child);
+                else if (nestedStores)
+                    // units like the cubby shelf group their compartments under one empty per row
+                    for (int j = 0; j < child.childCount; j++)
+                        if (child.GetChild(j).GetComponent<EntityInteractableStore>()) stores.Add(child.GetChild(j));
+            }
+            foreach (var st in stores)
+            {
+                var name = st.name;
                 int paren = name.IndexOf(" (", StringComparison.Ordinal);
                 if (paren > 0) name = name.Substring(0, paren);
-                var worldPos = unit.transform.TransformPoint(child.localPosition);
-                StoreFactory.Create(name, unit.transform, worldPos, yaw + child.localEulerAngles.y, id++);
+                var local = template.transform.InverseTransformPoint(st.position);
+                float localYaw = (Quaternion.Inverse(template.transform.rotation) * st.rotation).eulerAngles.y;
+                StoreFactory.Create(name, unit.transform, unit.transform.TransformPoint(local), yaw + localYaw, id++);
             }
+            return unit;
         }
 
         // ------------------------------------------------------------------ door
