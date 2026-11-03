@@ -172,7 +172,7 @@ def window_box(SB, SM, rng):
     box, greens = SB.planter(0.0, 0.0, SM, rng, length=0.95 / k, width=0.24 / k, height=0.2 / k, top=0.0,
                              front_z=1, n_plants=5)
     WX, wy, wz = -2.53, 2.2, -3.9          # facade plane and window centre (see build_facade)
-    base = (WX - 0.2, wy - 0.88, wz)       # box bottom centre
+    base = (WX - 0.13, wy - 0.88, wz)      # box bottom centre: back rim on the siding, rim just under the sill
     # Unity yaw -90 (front +z -> -x) is +90 about Blender Z
     M = Matrix.Translation(C.U(*base)) @ Matrix.Rotation(math.radians(90), 4, 'Z') @ Matrix.Scale(k, 4)
     bpy.context.view_layer.update()
@@ -180,7 +180,7 @@ def window_box(SB, SM, rng):
         o.matrix_world = M @ o.matrix_world
     # two wall brackets under the box
     for dz in (-0.3, 0.3):
-        box.append(C.ubox('bracket_arm', (WX - 0.13, base[1] - 0.03, wz + dz), (0.22, 0.05, 0.05), SM['post'], 0.008))
+        box.append(C.ubox('bracket_arm', (WX - 0.13, base[1] - 0.03, wz + dz), (0.26, 0.05, 0.05), SM['post'], 0.008))
         box.append(C.ubox('bracket_leg', (WX - 0.03, base[1] - 0.12, wz + dz), (0.05, 0.2, 0.05), SM['post'], 0.008))
     return box, greens
 
@@ -309,7 +309,7 @@ def build_facade(M):
     parts.append(C.ubox('wglass', (WX - 0.06, wy, wz), (0.03, 1.0, 0.8), glass, 0.0))
     parts.append(C.ubox('wmullv', (WX - 0.08, wy, wz), (0.04, 1.0, 0.05), trimw, 0.005))
     parts.append(C.ubox('wmullh', (WX - 0.08, wy, wz), (0.04, 0.05, 0.8), trimw, 0.005))
-    parts.append(C.ubox('wsill', (WX - 0.1, wy - 0.63, wz), (0.2, 0.06, 1.15), trimw, 0.015))
+    parts.append(C.ubox('wsill', (WX - 0.04, wy - 0.63, wz), (0.08, 0.06, 1.15), trimw, 0.015))   # shallow, so the window box plants clear it
     # (the window box below this window is built with the strawberry planters)
     C.finish(parts, 'yard_facade', OUT, 2048)
 
