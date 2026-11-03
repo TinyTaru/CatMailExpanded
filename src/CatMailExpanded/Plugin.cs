@@ -15,6 +15,7 @@ namespace CatMailExpanded
 
         internal static MelonPreferences_Entry<bool> DevMode;
         internal static MelonPreferences_Entry<int> YardUnlockLevel;
+        internal static MelonPreferences_Entry<int> PlanetariumUnlockLevel;
         internal static MelonPreferences_Entry<bool> ForceUnlockAll;
         internal static MelonPreferences_Entry<float> RestlessMinInterval;
         internal static MelonPreferences_Entry<float> RestlessMaxInterval;
@@ -28,6 +29,8 @@ namespace CatMailExpanded
             var cat = MelonPreferences.CreateCategory("CatMailExpanded", "Cat Mail Expanded");
             YardUnlockLevel = cat.CreateEntry("YardUnlockLevel", 10, "Yard unlock level",
                 "Post office level at which the outdoor yard opens and scented parcels start arriving (the game has 15 levels).");
+            PlanetariumUnlockLevel = cat.CreateEntry("PlanetariumUnlockLevel", 12, "Planetarium unlock level",
+                "Post office level at which the planetarium opens and otherworldly parcels start arriving.");
             RestlessMinInterval = cat.CreateEntry("RestlessMinInterval", 7f, "Restless hop min seconds");
             RestlessMaxInterval = cat.CreateEntry("RestlessMaxInterval", 14f, "Restless hop max seconds");
             PrepareUninstall = cat.CreateEntry("PrepareUninstall", false, "Prepare for uninstall",
@@ -49,6 +52,8 @@ namespace CatMailExpanded
             {
                 ParcelTracker.Update();
                 Yard.Update();
+                Planetarium.Update();
+                FrontPath.Update();
                 OutdoorAtmosphere.Update();
                 SpeakerRoom.Update();
             }
@@ -77,6 +82,8 @@ namespace CatMailExpanded
             ModProgress.Reset();
             SpeakerRoom.Reset();
             Yard.Reset();
+            Planetarium.Reset();
+            FrontPath.Reset();
             Outdoors.Reset();
             Patches.EntityScanner_ScanParcel.Reset();
             Scheduler.Clear();

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace CatMailExpanded.Content
 {
-    internal enum ModKind { None, Strawberry, Banana, Restless }
+    internal enum ModKind { None, Strawberry, Banana, Restless, Otherworldly }
 
     /// <summary>
     /// The new parcel types are stored as new raw values of the game's StorageConstraint field, so they
@@ -14,17 +14,19 @@ namespace CatMailExpanded.Content
         public const StorageConstraint Strawberry = (StorageConstraint)0x20;
         public const StorageConstraint Banana = (StorageConstraint)0x40;
         public const StorageConstraint Restless = (StorageConstraint)0x80;
+        public const StorageConstraint Otherworldly = (StorageConstraint)0x100;
 
         public static readonly StorageConstraint[] Scented = { Strawberry, Banana };
-        public static readonly StorageConstraint[] All = { Strawberry, Banana, Restless };
+        public static readonly StorageConstraint[] All = { Strawberry, Banana, Restless, Otherworldly };
 
-        public static bool IsModValue(StorageConstraint c) => c == Strawberry || c == Banana || c == Restless;
+        public static bool IsModValue(StorageConstraint c) => c == Strawberry || c == Banana || c == Restless || c == Otherworldly;
 
         public static ModKind KindOf(StorageConstraint c) => c switch
         {
             Strawberry => ModKind.Strawberry,
             Banana => ModKind.Banana,
             Restless => ModKind.Restless,
+            Otherworldly => ModKind.Otherworldly,
             _ => ModKind.None,
         };
 
@@ -42,6 +44,7 @@ namespace CatMailExpanded.Content
             ModKind.Strawberry => "sticker_strawberry",
             ModKind.Banana => "sticker_banana",
             ModKind.Restless => "sticker_restless",
+            ModKind.Otherworldly => "sticker_otherworldly",
             _ => null,
         };
     }

@@ -1,6 +1,6 @@
 # Cat Mail Expanded
 
-A MelonLoader mod for **Cat Mail Co.** that adds two new parcel types, an outdoor yard and a speaker room.
+A MelonLoader mod for **Cat Mail Co.** that adds three new parcel types, an outdoor yard, a planetarium and a speaker room.
 
 ## What it adds
 
@@ -16,9 +16,17 @@ A MelonLoader mod for **Cat Mail Co.** that adds two new parcel types, an outdoo
 - Calm while in the **speaker room** with the music playing (and on the boat, customer counters and workstations).
 - Only appear **after the game's ending** (the Old Postman scene and credits).
 
+### Otherworldly parcels and the planetarium
+- Marked with a "ringed-planet parcel" sticker and their own scanner glyph. They start arriving at post office **level 12** (configurable).
+- They must be stored in the **planetarium**, or they get damaged exactly the way cold parcels do outside the cold room (the game's own damage check decides when).
+- The planetarium is a domed wing off the pile corridor, across from the break room (the "winner" poster moved along the wall to make room). Its door is shut until it unlocks, then disappears like the game's other unlockable rooms.
+- Inside: a painted nebula sky turning slowly overhead, an orrery of planets circling a little sun, black-light tubes, a telescope, an armillary sphere, a star rug, starry shelves and a floor pallet, each with a **working storage label**.
+- It is lit like a black-light room: every parcel inside goes dark, and otherworldly parcels' white parts (tape, edges, name labels) and stickers fluoresce.
+
 ### Outdoor yard
 - Built behind the storage corridor's service door (the one that never opened): a wooden pier deck over the water with railings, a striped awning, string lights, planters (strawberries!), a banana plant, a lamp post, a "Fresh Air Storage" sign and three storage shelves.
 - The door stays shut until the yard unlocks, then swings open.
+- At the deck's south-east corner a closed garden gate looks out over a footbridge and a lamp-lit flagstone path to the front of the building (scenery only: the gate never opens).
 
 ### Speaker room (the break room, after the ending)
 - Two wooden speakers play the game's own music tracks (the regular background music ducks while you're inside) and gently bounce to the beat. A "Music Room" poster goes up.
@@ -47,6 +55,7 @@ MelonLoader 0.7.3's macOS build is x64-only and needs some workarounds, all in `
 | Setting | Default | Meaning |
 |---|---|---|
 | `YardUnlockLevel` | 10 | Level at which the yard opens and scented parcels start arriving (game max 15). |
+| `PlanetariumUnlockLevel` | 12 | Level at which the planetarium opens and otherworldly parcels start arriving. |
 | `RestlessMinInterval` / `RestlessMaxInterval` | 7 / 14 | Seconds between hops for an unhappy restless parcel. |
 | `ForceUnlockAll` | false | Testing aid: unlock everything immediately. |
 | `PrepareUninstall` | false | Turns all mod parcels back into normal ones and moves parcels off mod-only shelves on load. Save once, then remove the mod. |
@@ -55,7 +64,9 @@ MelonLoader 0.7.3's macOS build is x64-only and needs some workarounds, all in `
 ## Notes and limitations
 - New parcel types are stored as new values of the game's storage-constraint field, so they save, load and sync like native types. **Remove the mod only after a save made with `PrepareUninstall = true`**; otherwise the vanilla game can't describe those parcels.
 - Multiplayer: every player needs the mod. Restless hopping physics run on the host.
-- The new types are excluded from the game's recap damage check; their consequences are the fog and hopping instead.
+- Scented and restless parcels are excluded from the game's recap damage check (their consequences are the fog and hopping). Otherworldly parcels use it: outside the planetarium the check sees a native constraint no room around them protects.
+- The doorway into the planetarium is cut out of the corridor's wall mesh at runtime (`Core/MeshCutter.cs` reads the GPU-only mesh back and clips the triangles).
+- The planetarium's sky and sticker art were painted with Bria Fibo 2.0 (local, `Tools/gen_planetarium_art.sh`); its open weights are CC BY-NC 4.0, so check Bria's licence before any commercial use of those two images.
 
 ## Project layout
 | Path | Contents |
@@ -87,4 +98,5 @@ cd src/CatMailExpanded
 dotnet build -c Release
 ```
 The build copies the DLL into the game's `Mods` folder (`-p:Deploy=false` to skip). Rebuild models with e.g.
-`blender -b --factory-startup --python Art/Blender/yard.py -- all`.
+`blender -b --factory-startup --python Art/Blender/yard.py -- all` (also `planetarium.py`, `front.py`), and the planetarium textures with `python3 -I Tools/make_planetarium_textures.py`.
+On macOS, `Tools/macos/game.sh` drives the game like `Tools/game.sh` does on Windows, and `Tools/macos/load_test_save.sh` restarts it into the first save slot.

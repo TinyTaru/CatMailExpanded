@@ -14,10 +14,12 @@ namespace CatMailExpanded.Content
     {
         const string KeyYardAnnounced = "CME_YardAnnounced";
         const string KeySpeakerAnnounced = "CME_SpeakerRoomAnnounced";
+        const string KeyPlanetariumAnnounced = "CME_PlanetariumAnnounced";
         const string KeyFinishedEnding = "FinishedEnding";
 
         public static bool YardUnlocked { get; private set; }
         public static bool SpeakerRoomUnlocked { get; private set; }
+        public static bool PlanetariumUnlocked { get; private set; }
         public static bool GameStarted { get; private set; }
 
         /// <summary>
@@ -35,6 +37,7 @@ namespace CatMailExpanded.Content
         {
             YardUnlocked = false;
             SpeakerRoomUnlocked = false;
+            PlanetariumUnlocked = false;
             GameStarted = false;
             EndingSeenThisSession = false;
             _announced.Clear();
@@ -47,6 +50,7 @@ namespace CatMailExpanded.Content
             if (Plugin.PrepareUninstall.Value) { UninstallHelper.ConvertAll(); return; }
             WorldSetup.EnsureBuilt();
             Yard.SetOpen(false, animate: false);
+            Planetarium.SetOpen(false, animate: false);
             Refresh(fromSave: true);
             SpeakerRoom.ApplyState();
         }
@@ -60,6 +64,7 @@ namespace CatMailExpanded.Content
 
             bool ending = EndingSeenThisSession || save.GetBool(TableType.GameProgression, KeyFinishedEnding, false, null) || Plugin.ForceUnlockAll.Value;
             bool yard = prog.CurrentLevel >= Plugin.YardUnlockLevel.Value || ending || Plugin.ForceUnlockAll.Value;
+            bool planetarium = prog.CurrentLevel >= Plugin.PlanetariumUnlockLevel.Value || ending || Plugin.ForceUnlockAll.Value;
 
             bool changed = false;
             WorldSetup.EnsureBuilt();
@@ -71,6 +76,14 @@ namespace CatMailExpanded.Content
                 UnlockConstraints(ParcelKinds.Scented);
                 Announce(KeyYardAnnounced, Localization.Text("CME/Unlock_Yard"), fromSave, "sticker_strawberry");
             }
+            if (planetarium && !PlanetariumUnlocked)
+            {
+                PlanetariumUnlocked = true;
+                changed = true;
+                Planetarium.SetOpen(true, animate: !fromSave);
+                UnlockConstraints(new[] { ParcelKinds.Otherworldly });
+                Announce(KeyPlanetariumAnnounced, Localization.Text("CME/Unlock_Planetarium"), fromSave, "sticker_otherworldly");
+            }
             if (ending && !SpeakerRoomUnlocked)
             {
                 SpeakerRoomUnlocked = true;
@@ -81,7 +94,7 @@ namespace CatMailExpanded.Content
             }
             if (changed)
             {
-                Plugin.Log.Msg($"Progress: yard={YardUnlocked} speakerRoom={SpeakerRoomUnlocked} (level {prog.CurrentLevel}, ending {ending})");
+                Plugin.Log.Msg($"Progress: yard={YardUnlocked} planetarium={PlanetariumUnlocked} speakerRoom={SpeakerRoomUnlocked} (level {prog.CurrentLevel}, ending {ending})");
                 Changed?.Invoke();
             }
         }

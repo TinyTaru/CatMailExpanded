@@ -85,7 +85,7 @@ def build_deck(M):
 
     rail_run(X0 + 0.06, Z0 + 0.06, Z1 - 0.1, False)     # west
     rail_run(Z0 + 0.06, X0 + 0.06, X1 - 0.06, True)     # south
-    rail_run(X1 - 0.06, Z0 + 0.06, -7.2, False)         # east, south of the building
+    # (the east side south of the building is the garden gate to the front path: front.py)
     # threshold boards under the service door, closing the gap to the corridor floor (which starts at x -2.24)
     for k, z in enumerate((0.84 + 0.07 + i * 0.145 for i in range(14))):
         parts.append(C.ubox('threshold', (-2.335, TOP - 0.03, z), (0.29, 0.06, 0.135), M['plank'] if k % 2 else M['plank2'], 0.008))
