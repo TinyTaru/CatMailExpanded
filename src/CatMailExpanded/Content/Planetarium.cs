@@ -259,7 +259,7 @@ namespace CatMailExpanded.Content
             var palletPos = new Vector3(1.95f, FY, 21.92f);
             var p = Yard.BuildShelf(pallet, t, palletPos, 90f, ref id, keepLightmap: true);
             if (p) { p.name = "CME_PlanetPallet"; DimShelf(p); }
-            CloneLabel(tagL, t, new Vector3(1.95f, 1.25f, IZ0 + 0.08f), 270f, label++);
+            PalletLabel(p, t, Vector3.forward, label++);
         }
 
         /// <summary>The copied shelves are lit like the corridor; tone them down to the room's starlight.</summary>
@@ -284,6 +284,25 @@ namespace CatMailExpanded.Content
         /// A real storage tag: the label entity players click to pick an icon. It gets its own permanent identifier
         /// so the chosen icon saves and syncs like the game's own tags.
         /// </summary>
+        /// <summary>
+        /// A pallet's label: the game's flat front-mounted tag (as on its low shelves), on the pallet's edge that
+        /// faces the room (<paramref name="outward"/>), where stacked boxes never hide it.
+        /// </summary>
+        internal static void PalletLabel(GameObject pallet, Transform parent, Vector3 outward, int idOffset)
+        {
+            if (!pallet) return;
+            var tag = World.Find("prop_StorageTag_02");
+            if (!tag) { _log.Add("no pallet tag template"); return; }
+            var b = World.RendererBounds(pallet);
+            outward.y = 0;
+            outward.Normalize();
+            float yaw = Mathf.Atan2(outward.x, outward.z) * Mathf.Rad2Deg + 180f;   // the plate faces the tag's local -z
+            var edge = b.center + Vector3.Scale(b.extents, new Vector3(Mathf.Abs(outward.x), 0, Mathf.Abs(outward.z))).magnitude * outward;
+            var plate = new Vector3(edge.x, b.min.y + 0.13f, edge.z) + outward * 0.015f;
+            // the plate sits (0.10, 0.07, -0.01) from the tag's pivot
+            CloneLabel(tag, parent, plate - Quaternion.Euler(0, yaw, 0) * new Vector3(0.10f, 0.07f, -0.01f), yaw, idOffset);
+        }
+
         internal static void CloneLabel(GameObject source, Transform parent, Vector3 pos, float yaw, int idOffset)
         {
             if (!source) { _log.Add("no storage tag template"); return; }

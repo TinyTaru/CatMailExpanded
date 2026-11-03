@@ -1,5 +1,5 @@
 """The mirror room west of the extended pile corridor (see MirrorRoom.cs), and the exterior of the whole new wing
-(siding and a striped foundation skirt for the corridor's new stretch and the Catazon returns room, see PileWing.cs).
+(siding and a striped foundation skirt for the corridor's new stretch and the gift wrapping room, see PileWing.cs).
 All coordinates are Unity world space (see cme_export.U). Usage:
   blender -b --factory-startup --python mirror.py -- [room|exterior|all]
 Outputs mirror_room (+ tex_mirror_room, baked), wing_exterior (+ tex_wing_exterior, baked) and mirror_lights.txt
@@ -252,7 +252,7 @@ def build_room(M):
         C.urot(arm, y_deg=90 - math.degrees(a))
         parts.append(arm)
     # wall sconces on the east wall and the north wall's sides
-    for (x, z, n) in ((IX1, 29.2, (-1, 0)), (IX1, 32.1, (-1, 0)), (MN['x'] - MN['w'] / 2 - 0.65, IZ1, (0, -1)), (MN['x'] + MN['w'] / 2 + 0.65, IZ1, (0, -1))):
+    for (x, z, n) in ((IX1, 29.75, (-1, 0)), (IX1, 32.1, (-1, 0)), (MN['x'] - MN['w'] / 2 - 0.65, IZ1, (0, -1)), (MN['x'] + MN['w'] / 2 + 0.65, IZ1, (0, -1))):
         bx, bz = x + n[0] * 0.04, z + n[1] * 0.04
         parts.append(B('sc_plate', (bx, 2.05, bz), (0.05 if n[0] else 0.16, 0.24, 0.16 if n[0] else 0.05), M['gold'], 0.015))
         cx_, cz_ = x + n[0] * 0.16, z + n[1] * 0.16
