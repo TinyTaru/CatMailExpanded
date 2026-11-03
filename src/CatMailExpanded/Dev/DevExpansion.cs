@@ -169,6 +169,12 @@ namespace CatMailExpanded.Dev
                 Out("request=" + (c.CurrentRequest != null ? c.CurrentRequest.name : "none"));
                 c.CHEAT_ValidateRequest();
             });
+            DevConsole.Register("spectralinfo", a =>
+            {
+                // spectralinfo [off|on]: counts; "off" hides spectral parcels from every camera (to test the switch)
+                if (a.Length > 1) Content.Spectral.DebugAlwaysOff = a[1] == "off";
+                Out(Content.Spectral.Describe());
+            });
             DevConsole.Register("giftclick", a => Out("click used=" + Content.GiftRoom.TryClick()));
             DevConsole.Register("bell", a =>
             {

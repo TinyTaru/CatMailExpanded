@@ -32,7 +32,7 @@ A MelonLoader mod for **Cat Mail Co.** that adds new parcel types, an outdoor ya
 ### Spectral parcels and the mirror room
 - Marked with a ghost-parcel sticker and their own scanner glyph. They start arriving (pile, boat, customer drop-offs) once the mirror room opens.
 - Anywhere but the mirror room they flicker and fade from sight: only their stamps, stickers and name label stay visible (aiming at one still shows its outline). No damage, just a harder find.
-- The mirror room is plum and gold, with a chandelier, velvet curtains, a vanity, wooden shelves with working labels and a floor pallet. Its two gilded mirrors are real mirrors (each drawn by a camera at the viewer's reflection, only while visible), and they show spectral parcels wherever they are.
+- The mirror room is plum and gold, with a chandelier, velvet curtains, a vanity, wooden shelves with working labels and a floor pallet. Its two gilded mirrors are real mirrors (each drawn by a camera at the viewer's reflection, only while visible), and, like a vampire, a spectral parcel never shows in them (ordinary parcels reflect as usual).
 
 ### Gift wrapping
 - Once the gift wrapping room opens, 2–4 extra **gift customers** come to the counter each shift, on top of the shift's normal customers (they never count towards it). Each hands over a present and asks for its wrapping in a riddle ("Wrap it in whatever a cat dreams about at night. Tie it with a ribbon the colour of forget-me-nots."). The same riddle is written on the **gift tag** on top of the parcel.

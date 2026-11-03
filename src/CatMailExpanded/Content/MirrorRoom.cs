@@ -182,11 +182,11 @@ namespace CatMailExpanded.Content
                 var rot = Quaternion.Euler(0, u.yaw, 0);
                 Planetarium.CloneLabel(u.tag, t, u.pos + rot * u.tagLocal, u.yaw + u.tagYaw, label++);
             }
-            // a floor pallet in front of the west mirror (low enough to keep the glass clear), label under the glass
+            // a floor pallet in front of the west mirror (low enough to keep the glass clear), labelled on its front
             var pallet = World.Find("p_Floor_Storage_XL", "PostOffice_Environment") ?? World.Find("p_Floor_Storage_Dark_XL", "p_DarkRoom");
             var p = Yard.BuildShelf(pallet, t, new Vector3(IX0 + 0.85f, FY, 31.875f), 90f, ref id, keepLightmap: true);
             if (p) p.name = "CME_MirrorPallet";
-            Planetarium.CloneLabel(tagL, t, new Vector3(IX0 + 0.05f, 0.36f, 31.875f), 0f, label++);
+            Planetarium.PalletLabel(p, t, Vector3.right, label++);
         }
 
         // ------------------------------------------------------------------ candles
@@ -308,7 +308,7 @@ namespace CatMailExpanded.Content
                 // clip just behind the glass: anything further back (the frame's backing board) would fill the picture
                 float n = Mathf.Max(0.02f, d - 0.003f);
                 float k = n / d;
-                m.Cam.cullingMask = view.cullingMask | Spectral.HiddenLayerMask;
+                m.Cam.cullingMask = view.cullingMask & ~Spectral.MirrorExcludedMask;   // spectral parcels never reflect
                 m.Cam.clearFlags = view.clearFlags;
                 m.Cam.backgroundColor = view.backgroundColor;
                 m.Cam.farClipPlane = 60f;
@@ -390,6 +390,7 @@ namespace CatMailExpanded.Content
                 foreach (var m in _mirrors) if (m.Cam && cam && m.Cam.Pointer == cam.Pointer) { mirror = true; break; }
                 foreach (var r in _reflection) if (r && r.forceRenderingOff == mirror) r.forceRenderingOff = !mirror;
                 if (_firstPersonBody && _firstPersonBody.forceRenderingOff != mirror) _firstPersonBody.forceRenderingOff = mirror;
+                Spectral.MirrorPass(mirror);
             }
             catch { }
         }

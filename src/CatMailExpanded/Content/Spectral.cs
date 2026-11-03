@@ -18,6 +18,9 @@ namespace CatMailExpanded.Content
     {
         public const int HiddenLayer = 31;
         public static int HiddenLayerMask => 1 << HiddenLayer;
+        // the label graphics of spectral parcels: drawn by the player's camera, never by a mirror's
+        public const int UnreflectedLayer = 30;
+        public static int MirrorExcludedMask => (1 << HiddenLayer) | (1 << UnreflectedLayer);
         const float FadeOutDelay = 1.5f;       // seconds outside the room before it starts to fade
         const float FadeSpeed = 0.9f;          // visibility per second
 
@@ -29,16 +32,27 @@ namespace CatMailExpanded.Content
             public readonly List<(GameObject go, int layer)> Parts = new();
             public bool Hidden;                 // parts currently on the hidden layer
             public int Signature;
+            // everything drawn for the parcel (stickers, outline and labels too): switched off for mirror cameras
+            public readonly List<Renderer> Drawn = new();
+            public readonly List<Canvas> Canvases = new();
+            public readonly List<(GameObject go, int layer)> LabelParts = new();
+            public readonly List<GameObject> AddedCanvases = new();
+            public UnityEngine.Rendering.DisallowGPUDrivenRendering Classic;
+            public int ClassicCount = -1;
         }
 
-        /// <summary>Keeps the hidden layer out of whatever the player is looking through.</summary>
+        /// <summary>Spectral parcels being tracked: they never show in a mirror.</summary>
+        static readonly HashSet<State> _active = new();
+
+        /// <summary>Keeps the hidden layer out of whatever the player is looking through (and the unreflected layer in).</summary>
         public static void Update()
         {
             int mask = HiddenLayerMask;
             var cam = Cameras.View;
-            if (cam && (cam.cullingMask & mask) != 0) cam.cullingMask &= ~mask;
+            int seen = 1 << UnreflectedLayer;
+            if (cam && ((cam.cullingMask & mask) != 0 || (cam.cullingMask & seen) == 0)) cam.cullingMask = (cam.cullingMask & ~mask) | seen;
             var main = Camera.main;
-            if (main && main != cam && (main.cullingMask & mask) != 0) main.cullingMask &= ~mask;
+            if (main && main != cam && ((main.cullingMask & mask) != 0 || (main.cullingMask & seen) == 0)) main.cullingMask = (main.cullingMask & ~mask) | seen;
         }
 
         static void Collect(EntityParcel p, State s)
@@ -80,6 +94,27 @@ namespace CatMailExpanded.Content
                 return;
             }
             Collect(p, s);
+            s.Drawn.Clear();
+            foreach (var r in p.GetComponentsInChildren<Renderer>(true)) if (r) s.Drawn.Add(r);
+            s.Canvases.Clear();
+            foreach (var c in p.GetComponentsInChildren<Canvas>(true)) if (c) s.Canvases.Add(c);
+            // a canvas can't be switched per camera either, and it is culled by its own layer: each label's graphics
+            // get a nested canvas of their own on a layer the mirrors don't draw (the label's canvas keeps its
+            // collider on the stamp layer)
+            foreach (var c in s.Canvases)
+            {
+                if (!c || c.GetComponent<Collider>() == null) continue;
+                for (int i = 0; i < c.transform.childCount; i++)
+                {
+                    var go = c.transform.GetChild(i).gameObject;
+                    if (go.layer == UnreflectedLayer) continue;
+                    if (!go.GetComponent<Canvas>()) { go.AddComponent<Canvas>(); s.AddedCanvases.Add(go); }
+                    s.LabelParts.Add((go, go.layer));
+                    go.layer = UnreflectedLayer;
+                }
+            }
+            KeepClassic(p, s);
+            _active.Add(s);
             s.Inside = MirrorRoom.Contains(p.transform.position);
             if (s.Inside) s.OutsideSince = -1f;
             else if (s.OutsideSince < 0f) s.OutsideSince = now;
@@ -102,9 +137,67 @@ namespace CatMailExpanded.Content
             SetHidden(s, !show);
         }
 
+        /// <summary>
+        /// Called as each camera starts rendering: for a mirror camera every spectral parcel is switched off (the
+        /// body, its stickers and its label), for any other camera switched back on.
+        /// </summary>
+        /// <summary>
+        /// The GPU resident drawer only takes a renderer's on/off state once a frame, so switching it per camera does
+        /// nothing there: a spectral parcel is drawn the classic way instead (re-applied when it gains renderers).
+        /// </summary>
+        static void KeepClassic(EntityParcel p, State s)
+        {
+            try
+            {
+                if (!s.Classic)
+                {
+                    s.Classic = p.gameObject.GetComponent<UnityEngine.Rendering.DisallowGPUDrivenRendering>()
+                        ?? p.gameObject.AddComponent<UnityEngine.Rendering.DisallowGPUDrivenRendering>();
+                    s.ClassicCount = -1;
+                }
+                if (s.ClassicCount == s.Drawn.Count) return;
+                s.ClassicCount = s.Drawn.Count;
+                s.Classic.enabled = false;
+                s.Classic.applyToChildrenRecursively = true;
+                s.Classic.enabled = true;
+            }
+            catch (Exception e) { Plugin.Log.Warning("Spectral classic rendering: " + e.Message); s.ClassicCount = s.Drawn.Count; }
+        }
+
+        public static int MirrorPasses;
+        public static string Describe()
+        {
+            int drawn = 0, canv = 0, off = 0;
+            foreach (var s in _active) { drawn += s.Drawn.Count; canv += s.Canvases.Count; foreach (var r in s.Drawn) if (r && r.forceRenderingOff) off++; }
+            return $"spectral active={_active.Count} drawn={drawn} canvases={canv} off-now={off} mirrorPasses={MirrorPasses}";
+        }
+
+        public static bool DebugAlwaysOff;
+
+        public static void MirrorPass(bool mirror)
+        {
+            if (mirror) MirrorPasses++;
+            mirror |= DebugAlwaysOff;
+            foreach (var s in _active)
+                foreach (var r in s.Drawn) if (r && r.forceRenderingOff != mirror) r.forceRenderingOff = mirror;
+        }
+
         public static void Release(State s)
         {
             if (s == null) return;
+            if (_active.Remove(s))
+            {
+                foreach (var r in s.Drawn) if (r) r.forceRenderingOff = false;
+            }
+            foreach (var (go, layer) in s.LabelParts) if (go) go.layer = layer;
+            s.LabelParts.Clear();
+            foreach (var go in s.AddedCanvases) if (go && go.GetComponent<Canvas>()) UnityEngine.Object.Destroy(go.GetComponent<Canvas>());
+            s.AddedCanvases.Clear();
+            s.Drawn.Clear();
+            s.Canvases.Clear();
+            if (s.Classic) UnityEngine.Object.Destroy(s.Classic);
+            s.Classic = null;
+            s.ClassicCount = -1;
             SetHidden(s, false);
             s.Visibility = 1f;
             s.OutsideSince = -1f;

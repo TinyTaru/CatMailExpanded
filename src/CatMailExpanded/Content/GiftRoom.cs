@@ -35,7 +35,8 @@ namespace CatMailExpanded.Content
         static readonly float[] RollY = { 1.42f, 1.72f };
         static readonly float[] RollZ = { -0.75f, -0.25f, 0.25f, 0.75f };
         const int StoreIdBase = 700, LabelIdBase = 800;
-        const float RugX = 9.6f, RugZ = 29.1f, RugW = 2.5f, RugL = 3.75f;
+        const float RugX = 9.7f, RugZ = 29.9f, RugW = 2.27f, RugL = 3.4f;
+        const float PalletZ = 27.6f;   // the floor pallet for big boxes, under the poster
         const float ClickRange = 3.2f;
 
         public static readonly string[] Papers = { "stars", "candy", "dots", "flowers", "fish", "plaid", "paws", "gold" };
@@ -479,6 +480,9 @@ namespace CatMailExpanded.Content
             // shelves along the north wall for gifts waiting to be picked up
             var shelfM = World.Find("p_Shelves_M", "PostOffice_Environment") ?? World.Find("p_Shelves_M");
             var tagM = World.Find("prop_StorageTag_Left (1)", "p_DarkRoom") ?? World.Find("prop_StorageTag_Left", "p_DarkRoom");
+            // the mirrored tag for a unit's right side: a left tag turned round would show its back; a right tag
+            // at the left tag's yaw + 180 sticks out to the front of the unit just as the left one does
+            var tagR = World.Find("prop_StorageTag_Right (1)", "p_DarkRoom") ?? World.Find("prop_StorageTag_Right") ?? tagM;
             int label = LabelIdBase;
             foreach (var x in new[] { 8.8f, WallE - 0.91f })
             {
@@ -488,7 +492,7 @@ namespace CatMailExpanded.Content
                 unit.name = "CME_GiftShelf";
                 // the sign on the side facing the gap between the two shelves (the outer sides are against walls)
                 bool west = x > 10f;
-                Planetarium.CloneLabel(tagM, t, pos + new Vector3(west ? -0.79f : 0.79f, 1.60f, -0.22f), west ? 90f : 270f, label++);
+                Planetarium.CloneLabel(west ? tagM : tagR, t, pos + new Vector3(west ? -0.79f : 0.79f, 1.60f, -0.22f), west ? 90f : 270f, label++);
             }
 
             // a cubby unit against the south wall for small gifts (its own store ids, after everything above)
@@ -501,14 +505,25 @@ namespace CatMailExpanded.Content
                 if (unit)
                 {
                     unit.name = "CME_GiftCubby";
-                    Planetarium.CloneLabel(tagM, t, cpos + Quaternion.Euler(0, 180f, 0) * new Vector3(1.22f, 1.75f, -0.3f), 90f, label++);
+                    // on its west side (the east side is against the wall)
+                    Planetarium.CloneLabel(tagR, t, cpos + Quaternion.Euler(0, 180f, 0) * new Vector3(1.22f, 1.75f, -0.3f), 90f, label++);
                 }
             }
             else _log.Add("no cubby template");
 
+            // a floor pallet against the west wall for big boxes (after the shelves: their ids stay as saved)
+            var pallet = World.Find("p_Floor_Storage_XL", "PostOffice_Environment") ?? World.Find("p_Floor_Storage_Dark_XL", "p_DarkRoom");
+            var pu = Yard.BuildShelf(pallet, t, new Vector3(WallW + 0.75f, PileWing.FloorY, PalletZ), 90f, ref id, keepLightmap: true);
+            if (pu)
+            {
+                pu.name = "CME_GiftPallet";
+                Planetarium.PalletLabel(pu, t, Vector3.right, label++);
+            }
+            else _log.Add("no pallet template");
+
             // sign over the pegboard, how-to poster, corridor plaque, decor
             Flat(t, "CME_GiftSign", "gift_sign", new Vector3(WallE - 0.015f, 2.78f, BenchPos.z), 90f, new Vector2(1.5f, 0.66f));
-            Flat(t, "CME_GiftPoster", "gift_poster", new Vector3(WallW + 0.06f, 1.7f, 28.4f), 270f, new Vector2(0.75f, 1.0f));
+            Flat(t, "CME_GiftPoster", "gift_poster", new Vector3(WallW + 0.06f, 1.7f, PalletZ), 270f, new Vector2(0.75f, 1.0f));
             Flat(t, "CME_GiftPlaque", "gift_logo", new Vector3(PileWing.CX1 - 0.012f, 1.85f, 29.95f), 90f, new Vector2(0.5f, 0.5f));
             World.Mesh("gift_decor", "tex_gift_decor", t, Vector3.zero, 0).name = "CME_GiftDecor";
             World.Box(t, "display", new Vector3(8.35f, 0.4f, 26.5f), new Vector3(0.95f, 0.8f, 0.95f), 0);
