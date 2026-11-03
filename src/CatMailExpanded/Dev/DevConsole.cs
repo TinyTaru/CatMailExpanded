@@ -368,15 +368,7 @@ namespace CatMailExpanded.Dev
                 foreach (var n in UnityEngine.Object.FindObjectsByType<Il2Cpp.NotificationItemInterface>(FindObjectsSortMode.None))
                 {
                     var t = n.LinkedText;
-                    sb.AppendLine($"toast rect={t.rectTransform.rect.size} size={t.fontSize} max={t.fontSizeMax} min={t.fontSizeMin} auto={t.enableAutoSizing} wrap={t.textWrappingMode} overflow={t.overflowMode} margin={t.margin} pref={t.GetPreferredValues()} lines={t.textInfo.lineCount} screen={Screen.width}");
-                    var corners = new Vector3[4];
-                    for (var tr = t.transform; tr != null && tr.GetComponent<Canvas>() == null; tr = tr.parent)
-                    {
-                        var rt = tr.GetComponent<RectTransform>();
-                        if (rt == null) continue;
-                        rt.GetWorldCorners(corners);
-                        sb.AppendLine($"  {tr.name} rect={rt.rect} anchors={rt.anchorMin}-{rt.anchorMax} pivot={rt.pivot} pos={rt.anchoredPosition} x={corners[0].x:0}..{corners[2].x:0} y={corners[0].y:0}..{corners[2].y:0} comps=[{string.Join(",", System.Linq.Enumerable.Select(tr.GetComponents<Component>(), c => c.GetIl2CppType().Name))}]");
-                    }
+                    sb.AppendLine($"toast rect={t.rectTransform.rect.size} size={t.fontSize} max={t.fontSizeMax} min={t.fontSizeMin} auto={t.enableAutoSizing} wrap={t.textWrappingMode} overflow={t.overflowMode} margin={t.margin} pref={t.GetPreferredValues()} lines={t.textInfo.lineCount}");
                 }
                 Out(sb.ToString());
             });
