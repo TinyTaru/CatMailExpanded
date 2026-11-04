@@ -282,12 +282,13 @@ def build_room(M):
     parts.append(oval('rug', 1.8, 2.75, FY + 0.02, M['rug']))
     parts.append(oval('rug_star', 0.5, 0.75, FY + 0.028, M['rugborder'], 6))
 
-    # --- dressing table with a round vanity mirror and a stool, south-west corner
-    tx, tz = -0.55, IZ0 + 0.35
-    parts.append(B('dt_top', (tx, 0.78, tz), (1.1, 0.06, 0.48), M['wood'], 0.015))
-    for (dx, dz) in ((-0.5, -0.18), (0.5, -0.18), (-0.5, 0.18), (0.5, 0.18)):
+    # --- dressing table with a round vanity mirror and a stool, south-west corner, in the 1.04 m gap between the
+    # west wall's south shelf unit (x <= -0.85) and the south wall's cubby unit (x >= 0.19) (MirrorRoom.cs)
+    tx, tz = -0.33, IZ0 + 0.35
+    parts.append(B('dt_top', (tx, 0.78, tz), (0.84, 0.06, 0.48), M['wood'], 0.015))
+    for (dx, dz) in ((-0.38, -0.18), (0.38, -0.18), (-0.38, 0.18), (0.38, 0.18)):
         parts.append(B('dt_leg', (tx + dx, 0.41, tz + dz), (0.05, 0.74, 0.05), M['wood'], 0.01))
-    parts.append(B('dt_drawer', (tx, 0.68, tz + 0.21), (0.9, 0.14, 0.06), M['wood'], 0.01))
+    parts.append(B('dt_drawer', (tx, 0.68, tz + 0.21), (0.68, 0.14, 0.06), M['wood'], 0.01))
     parts.append(sphere('dt_knob', (tx, 0.68, tz + 0.25), 0.025, M['gold']))
     rim = C.ucyl('vanity_rim', (tx, 1.32, tz - 0.12), 0.34, 0.05, M['gold'], 32)
     C.urot(rim, x_deg=90)
@@ -301,11 +302,12 @@ def build_room(M):
         a = 2 * math.pi * i / 3
         parts.append(B('stool_leg', (tx + 0.14 * math.cos(a), 0.2, tz + 0.62 + 0.14 * math.sin(a)), (0.04, 0.4, 0.04), M['wood'], 0.01))
     # perfume bottles and a powder box
-    for (dx, h, m) in ((-0.38, 0.14, M['crystal']), (-0.28, 0.1, M['velvet']), (0.32, 0.08, M['gold'])):
+    for (dx, h, m) in ((-0.3, 0.14, M['crystal']), (-0.21, 0.1, M['velvet']), (0.28, 0.08, M['gold'])):
         parts.append(C.ucyl('bottle', (tx + dx, 0.81 + h / 2, tz + 0.05), 0.04, h, m, 10))
 
-    # --- coat stand with a top hat and a cane, north-west corner
-    sx, sz = IX0 + 0.4, IZ1 - 0.45
+    # --- coat stand with a top hat, in the gap between the west wall's north shelf unit (MirrorRoom.cs, it reaches
+    # x -0.88) and the north mirror's frame, far enough out from the wall that the sconce never seems to sit on the hat
+    sx, sz = -0.5, IZ1 - 0.85
     parts.append(C.ucyl('stand_pole', (sx, 0.95, sz), 0.03, 1.8, M['wood'], 10))
     parts.append(C.ucyl('stand_base', (sx, 0.06, sz), 0.24, 0.06, M['wood'], 16))
     for i in range(4):

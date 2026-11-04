@@ -524,7 +524,8 @@ namespace CatMailExpanded.Content
             // sign over the pegboard, how-to poster, corridor plaque, decor
             Flat(t, "CME_GiftSign", "gift_sign", new Vector3(WallE - 0.015f, 2.78f, BenchPos.z), 90f, new Vector2(1.5f, 0.66f));
             Flat(t, "CME_GiftPoster", "gift_poster", new Vector3(WallW + 0.06f, 1.7f, PalletZ), 270f, new Vector2(0.75f, 1.0f));
-            Flat(t, "CME_GiftPlaque", "gift_logo", new Vector3(PileWing.CX1 - 0.012f, 1.85f, 29.95f), 90f, new Vector2(0.5f, 0.5f));
+            // the corridor wall's hallway surface stands 0.21 in front of its plane (CX1) here
+            Flat(t, "CME_GiftPlaque", "gift_plaque", new Vector3(PileWing.CX1 - 0.225f, 1.85f, 29.95f), 90f, new Vector2(0.5f, 0.5f));
             World.Mesh("gift_decor", "tex_gift_decor", t, Vector3.zero, 0).name = "CME_GiftDecor";
             World.Box(t, "display", new Vector3(8.35f, 0.4f, 26.5f), new Vector3(0.95f, 0.8f, 0.95f), 0);
             World.Box(t, "bin", new Vector3(11.6f, 0.25f, 30.95f), new Vector3(0.36f, 0.5f, 0.36f), 0);

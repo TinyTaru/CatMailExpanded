@@ -226,6 +226,58 @@ def image_mat(name, image_path):
     return m
 
 
+def _boost_small_parts(obj, ref_area=0.6, max_boost=5.0):
+    """Scales the UV islands of each small loose part up about its centre (packing then shrinks everything to fit),
+    so tiny parts keep enough texels to show their colour."""
+    import bmesh
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uvl = bm.loops.layers.uv['bake']
+    bm.faces.ensure_lookup_table()
+    seen = set()
+    for f0 in bm.faces:
+        if f0.index in seen:
+            continue
+        stack, part = [f0], []
+        seen.add(f0.index)
+        while stack:
+            f = stack.pop()
+            part.append(f)
+            for v in f.verts:
+                for g in v.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        area = sum(f.calc_area() for f in part)
+        s = min(max_boost, max(1.0, math.sqrt(ref_area / max(area, 1e-6))))
+        if s <= 1.001:
+            continue
+        loops = [l for f in part for l in f.loops]
+        cu = sum(l[uvl].uv.x for l in loops) / len(loops)
+        cv = sum(l[uvl].uv.y for l in loops) / len(loops)
+        for l in loops:
+            uv = l[uvl].uv
+            l[uvl].uv = ((uv.x - cu) * s + cu, (uv.y - cv) * s + cv)
+    bm.to_mesh(me)
+    bm.free()
+
+
+def _push_pull(rgb, w):
+    """Fills pixels with weight 0 from a pyramid of their weighted surroundings (size must be a power of two)."""
+    import numpy as np
+    h, wd = w.shape
+    if h <= 1 or wd <= 1:
+        tot = max(w.sum(), 1e-6)
+        return np.broadcast_to((rgb * w[..., None]).sum((0, 1)) / tot, rgb.shape).copy()
+    pre = rgb * w[..., None]
+    cs = pre.reshape(h // 2, 2, wd // 2, 2, 3).sum((1, 3))
+    ws = w.reshape(h // 2, 2, wd // 2, 2).sum((1, 3))
+    low = _push_pull(np.where(ws[..., None] > 0, cs / np.maximum(ws, 1e-6)[..., None], 0), np.minimum(ws, 1.0))
+    up = np.repeat(np.repeat(low, 2, 0), 2, 1)
+    return np.where(w[..., None] > 0, rgb, up)
+
+
 def bake_textures(obj, out_png, size=1024, ao_strength=0.55, margin=8, top_light=0.12):
     """Bakes the object's materials (diffuse colour) * ambient occlusion into one texture.
     Replaces UVs with a fresh smart projection, keeps material slots for submesh names but
@@ -247,9 +299,18 @@ def bake_textures(obj, out_png, size=1024, ao_strength=0.55, margin=8, top_light
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.012)
     bpy.ops.object.mode_set(mode='OBJECT')
+    # small parts (candles, rosettes, thin trims) would get islands under a pixel wide next to whole walls, and the
+    # bake writes nothing into those: give each loose part a minimum share, then pack the islands tightly
+    _boost_small_parts(obj)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.select_all(action='SELECT')
+    bpy.ops.uv.pack_islands(rotate=True, margin=0.003, shape_method='AABB')
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     def make_img(nm):
-        img = bpy.data.images.new(nm, size, size, alpha=False, float_buffer=False)
+        img = bpy.data.images.new(nm, size, size, alpha=True, float_buffer=False)
+        img.generated_color = (0, 0, 0, 0)   # alpha marks the pixels the bake wrote
         for slot in obj.material_slots:
             nt = slot.material.node_tree
             n = nt.nodes.new('ShaderNodeTexImage')
@@ -279,6 +340,11 @@ def bake_textures(obj, out_png, size=1024, ao_strength=0.55, margin=8, top_light
     a = np.array(ao.pixels[:]).reshape(size, size, 4)[..., :1]
     shade = 1 - ao_strength * (1 - a)
     c[..., :3] = np.clip(c[..., :3] * shade, 0, 1)
+    # fill every pixel the bake left empty with its surroundings, so no sampling or mip level ever reaches black
+    valid = c[..., 3] > 0.5
+    print('bake coverage %.2f' % valid.mean())
+    c[..., :3] = _push_pull(c[..., :3], valid.astype(float))
+    c[..., 3] = 1
     out = bpy.data.images.new('bake_out', size, size, alpha=False)
     out.pixels = c.flatten()
     out.filepath_raw = out_png

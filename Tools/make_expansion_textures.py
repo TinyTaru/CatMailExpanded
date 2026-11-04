@@ -12,11 +12,13 @@ Outputs go to Assets/Build:
   gift_tag.png           the sender's gift tag card (RGBA)
   gift_sign.png          the gift room's wall sign
   gift_poster.png        how-to-wrap poster
+  gift_plaque.png        the corridor plaque by the gift room's door
   scan_gift.png          scanner glyph for gifts
 """
 import math
 import os
 import random
+import sys
 from collections import deque
 
 import numpy as np
@@ -200,72 +202,241 @@ def scan_gift(out):
                 d.ellipse([x0, cy - s * 0.95, x1, cy - s * 0.47], outline=yellow, width=9)
 
 
+# ---------------------------------------------------------------- the gift room's wall art
+# Drawn to match the game's "How to weigh a parcel" board (t_WorldsAndStampsMaps_BC): a pale frame, a cream title
+# strip lettered in the game's own font (Grandstander), soft brushed colour bands, and flat icons made like
+# stickers (a cream rim and a soft drop shadow).
+GRAND = os.path.join(ROOT, 'Art', 'Fonts', 'Grandstander-clean.ttf')
+P_INK = (74, 66, 68)
+P_CREAM = (232, 221, 199)
+P_FRAME = (226, 222, 214)
+P_OLIVE = (162, 166, 96)
+P_ORANGE = (238, 182, 96)
+P_TEAL = (120, 168, 168)
+P_PURPLE = (142, 120, 152)
+P_PINK = (214, 136, 150)
+P_SLATE = (138, 144, 170)
+P_RIM = (236, 230, 218)
+P_RED = (198, 72, 78)
+
+
+def gfont(size):
+    return ImageFont.truetype(GRAND, size)
+
+
+def letter(d, xy, text, size, fill=P_INK, anchor='mm'):
+    """Grandstander thickened a little, as the game sets its board titles."""
+    d.text(xy, text, font=gfont(size), fill=fill, anchor=anchor, stroke_width=max(1, size // 30), stroke_fill=fill)
+
+
+def brushed(w, h, col, seed, strength=1.0):
+    """A flat colour with the soft, faceted brush texture of the game's painted boards."""
+    rnd = random.Random(seed)
+    img = Image.new('RGB', (w, h), col)
+    d = ImageDraw.Draw(img, 'RGBA')
+    for _ in range(int(w * h / 900) + 8):
+        cx, cy = rnd.uniform(-0.1, 1.1) * w, rnd.uniform(-0.1, 1.1) * h
+        r = rnd.uniform(0.08, 0.3) * max(w, h)
+        a0 = rnd.uniform(0, math.tau)
+        pts = [(cx + r * math.cos(a0 + k * math.tau / 3 + rnd.uniform(-0.4, 0.4)),
+                cy + r * 0.6 * math.sin(a0 + k * math.tau / 3 + rnd.uniform(-0.4, 0.4))) for k in range(3)]
+        dv = rnd.uniform(-14, 14) * strength
+        tone = tuple(int(max(0, min(255, c + dv + rnd.uniform(-4, 4)))) for c in col)
+        d.polygon(pts, fill=tone + (int(38 * strength),))
+    return img.filter(ImageFilter.GaussianBlur(max(1.5, min(w, h) / 160)))
+
+
+def sticker(base, layer, rim=10, shadow=(6, 8)):
+    """Pastes an RGBA drawing onto base as a sticker: a cream rim around its shape and a soft shadow under it."""
+    a = layer.split()[3]
+    grown = a.filter(ImageFilter.MaxFilter(rim * 2 + 1)).filter(ImageFilter.GaussianBlur(1.2))
+    sh = Image.new('RGBA', layer.size, (40, 30, 40, 0))
+    sh.putalpha(grown.point(lambda v: int(v * 0.32)).filter(ImageFilter.GaussianBlur(5)))
+    base.alpha_composite(sh, shadow)
+    rimimg = Image.new('RGBA', layer.size, P_RIM + (0,))
+    rimimg.putalpha(grown)
+    base.alpha_composite(rimimg)
+    base.alpha_composite(layer)
+
+
+def icon_layer(size):
+    return Image.new('RGBA', (size, size), (0, 0, 0, 0))
+
+
+def draw_present(d, cx, cy, s, box, ribbon, line=P_INK):
+    """A wrapped present: box, lid, ribbon band and a two-loop bow."""
+    w, h, lid = s, s * 0.7, s * 0.22
+    top = cy - h / 2 + lid * 0.5
+    lw = max(2, int(s / 26))
+    d.rounded_rectangle([cx - w * 0.44, top, cx + w * 0.44, cy + h / 2], radius=s * 0.05, fill=box, outline=line, width=lw)
+    d.rounded_rectangle([cx - w / 2, top - lid, cx + w / 2, top + lid * 0.2], radius=s * 0.05, fill=box, outline=line, width=lw)
+    d.rectangle([cx - s * 0.07, top - lid + lw, cx + s * 0.07, cy + h / 2 - lw], fill=ribbon)
+    for sx in (-1, 1):
+        x0, x1 = sorted((cx + sx * s * 0.03, cx + sx * s * 0.3))
+        d.ellipse([x0, top - lid - s * 0.2, x1, top - lid + s * 0.02], fill=ribbon, outline=line, width=lw)
+    d.ellipse([cx - s * 0.08, top - lid - s * 0.11, cx + s * 0.08, top - lid + s * 0.04], fill=ribbon, outline=line, width=lw)
+
+
+def icon_present(size, box, ribbon):
+    L = icon_layer(size)
+    draw_present(ImageDraw.Draw(L), size / 2, size / 2 + size * 0.08, size * 0.74, box, ribbon)
+    return L
+
+
+def icon_tag(size):
+    """A gift tag on a string, with a squiggle of riddle on it."""
+    L = icon_layer(size)
+    d = ImageDraw.Draw(L)
+    lw = max(2, size // 40)
+    c, s = size / 2, size * 0.36
+    pts = [(c - s, c - s * 0.55), (c + s * 0.55, c - s * 0.55), (c + s, c), (c + s * 0.55, c + s * 0.55), (c - s, c + s * 0.55)]
+    d.polygon(pts, fill=(246, 236, 214), outline=P_INK)
+    d.line(pts + [pts[0]], fill=P_INK, width=lw, joint='curve')
+    d.ellipse([c + s * 0.45, c - s * 0.12, c + s * 0.69, c + s * 0.12], fill=P_INK)
+    d.arc([c + s * 0.5, c - s * 1.05, c + s * 1.3, c + s * 0.05], 180, 330, fill=P_RED, width=lw + 2)
+    for k, ln in enumerate((0.95, 0.7, 0.85)):
+        y = c - s * 0.28 + k * s * 0.28
+        x0 = c - s * 0.78
+        d.line([(x0 + i * s * 0.1, y + (s * 0.05 if i % 2 else -s * 0.05)) for i in range(int(ln * 11))], fill=P_INK, width=lw)
+    return L
+
+
+def icon_rolls(size, papers):
+    """Three paper rolls standing in a row, each in a real wrapping paper."""
+    L = icon_layer(size)
+    lw = max(2, size // 45)
+    rw, rh = size * 0.22, size * 0.62
+    for k, p in enumerate(papers):
+        x0 = size * 0.14 + k * size * 0.255
+        y0 = size * 0.22 + (k % 2) * size * 0.06
+        box = [int(x0), int(y0), int(x0 + rw), int(y0 + rh)]
+        m = Image.new('L', (size, size), 0)
+        ImageDraw.Draw(m).rounded_rectangle(box, radius=rw * 0.25, fill=255)
+        tex = p.resize((size, size))
+        L.paste(tex, (0, 0), m)
+        d = ImageDraw.Draw(L)
+        d.rounded_rectangle(box, radius=rw * 0.25, outline=P_INK, width=lw)
+        d.ellipse([box[0] + rw * 0.2, box[1] - rw * 0.02, box[2] - rw * 0.2, box[1] + rw * 0.2], fill=(214, 186, 140), outline=P_INK, width=lw)
+    return L
+
+
+def icon_spools(size):
+    """Ribbon spools with tails, red, yellow and blue."""
+    L = icon_layer(size)
+    d = ImageDraw.Draw(L)
+    lw = max(2, size // 45)
+    for k, col in enumerate((P_RED, (238, 196, 82), (98, 134, 206))):
+        cx = size * (0.22 + k * 0.28)
+        cy = size * 0.36
+        r = size * 0.085
+        d.line([(cx, cy), (cx + r * 0.6, cy + size * 0.36), (cx - r * 0.2, cy + size * 0.5)], fill=col, width=int(size * 0.045), joint='curve')
+        for fy in (cy - r * 1.55, cy + r * 1.25):
+            d.rounded_rectangle([cx - r * 1.3, fy, cx + r * 1.3, fy + r * 0.32], radius=r * 0.12, fill=(196, 150, 104), outline=P_INK, width=lw)
+        d.rectangle([cx - r, cy - r * 1.23, cx + r, cy + r * 1.25], fill=col, outline=P_INK, width=lw)
+    return L
+
+
+
+def board(W, H, seed):
+    """The poster's pale paper with its thin frame."""
+    img = brushed(W, H, P_FRAME, seed, 0.5).convert('RGBA')
+    return img
+
+
+def band(img, box, col, seed):
+    x0, y0, x1, y1 = [int(v) for v in box]
+    img.paste(brushed(x1 - x0, y1 - y0, col, seed, 1.7), (x0, y0))
+
+
 def gift_tag(out):
-    """A cream card with a scalloped border and a punched hole on the left, string looping out."""
+    """The sender's tag on a gift: a cream card, red inner border and gold dots, with a punched hole on the left.
+    Opaque all over (the prop shader has no transparency, so cut-away corners would show black)."""
     W, H = 512, 320
-    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    img = brushed(W, H, (246, 238, 220), 31, 0.4)
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([6, 6, W - 6, H - 6], radius=34, fill=(250, 244, 230, 255), outline=(196, 160, 116, 255), width=6)
-    d.rounded_rectangle([26, 26, W - 26, H - 26], radius=22, outline=RIBBON + (255,), width=4)
+    d.rectangle([0, 0, W - 1, H - 1], outline=(196, 160, 116), width=10)
+    d.rounded_rectangle([26, 26, W - 26, H - 26], radius=22, outline=RIBBON, width=4)
     for x in range(40, W - 30, 26):
-        d.ellipse([x - 4, 14, x + 4, 22], fill=GOLD + (255,))
-        d.ellipse([x - 4, H - 22, x + 4, H - 14], fill=GOLD + (255,))
-    d.ellipse([16, H / 2 - 13, 42, H / 2 + 13], fill=(0, 0, 0, 0), outline=(196, 160, 116, 255), width=4)
+        d.ellipse([x - 4, 14, x + 4, 22], fill=GOLD)
+        d.ellipse([x - 4, H - 22, x + 4, H - 14], fill=GOLD)
+    d.ellipse([14, H / 2 - 15, 44, H / 2 + 15], fill=(150, 112, 78), outline=(196, 160, 116), width=4)
     img.save(out)
 
 
 def gift_sign(out):
+    """The sign over the pegboard: the title on a cream strip, and a row of colour bands each with a present."""
     W, H = 1024, 448
-    img = Image.new('RGBA', (W, H), (250, 244, 230, 255))
+    img = board(W, H, 41)
+    m = 18
+    band(img, (m, m, W - m, 200), P_CREAM, 42)
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([10, 10, W - 10, H - 10], radius=40, fill=(250, 244, 230), outline=TEAL, width=22)
-    d.text((W / 2, 150), 'GIFT WRAPPING', font=font(98), fill=INK, anchor='mm')
-    d.rectangle([22, 236, W - 22, 262], fill=RIBBON)
-    cols = [(238, 170, 180), (150, 205, 210), (246, 214, 120), (180, 160, 220), (160, 210, 150)]
+    letter(d, (W / 2, 112), 'Gift Wrapping', 104)
+    cols = [P_OLIVE, P_ORANGE, P_TEAL, P_PURPLE, P_PINK]
+    boxes = [(232, 236, 244), (120, 168, 168), (248, 214, 120), (238, 170, 180), (178, 158, 214)]
+    ribbons = [P_RED, P_RED, (98, 134, 206), (142, 92, 170), (238, 196, 82)]
+    gap = 10
+    cw = (W - 2 * m - gap * 4) / 5
     for i, c in enumerate(cols):
-        present(d, 170 + i * 171, 345, 105, c, RIBBON, INK, 4)
+        x0 = m + i * (cw + gap)
+        band(img, (x0, 200 + gap, x0 + cw, H - m), c, 50 + i)
+        sticker(img, _placed(icon_present(150, boxes[i], ribbons[i]), W, H, x0 + cw / 2, (200 + gap + H - m) / 2 + 6))
     img.convert('RGB').save(out)
 
 
+def _placed(layer, W, H, cx, cy):
+    """A full-size transparent layer with the icon centred at (cx, cy)."""
+    full = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    full.paste(layer, (int(cx - layer.width / 2), int(cy - layer.height / 2)), layer)
+    return full
+
+
 def gift_poster(out):
+    """How to wrap a gift, laid out like the game's weighing board: four bands, an icon on the left of each and the
+    step on the right."""
     W, H = 768, 1024
-    img = Image.new('RGB', (W, H), (250, 244, 230))
+    img = board(W, H, 61)
+    m, gap = 22, 10
+    title_h = 168
+    band(img, (m, m, W - m, m + title_h), P_CREAM, 62)
     d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, W, 150], fill=TEAL)
-    d.text((W / 2, 78), 'HOW TO WRAP A GIFT', font=font(54), fill=(255, 255, 255), anchor='mm')
-    papers = [Image.open(os.path.join(OUT, 'gift_paper_' + p + '.png')).resize((70, 70)) for p in PAPERS]
+    letter(d, (W / 2, m + title_h / 2 + 4), 'How to wrap a gift', 66)
+    papers = [Image.open(os.path.join(OUT, 'gift_paper_' + p + '.png')).convert('RGBA') for p in ('stars', 'candy', 'fish')]
     rows = [
-        ('tag', 'Read the gift tag riddle.'),
-        ('bench', 'Put the gift on the bench.'),
-        ('paper', 'Click the right paper roll.'),
-        ('ribbon', 'Click the right ribbon spool.'),
+        (P_OLIVE, icon_tag(170), ['Read the riddle', 'on the gift tag']),
+        (P_ORANGE, icon_present(170, (238, 170, 180), P_RED), ['Put the gift', 'on the bench']),
+        (P_TEAL, icon_rolls(170, papers), ['Click the', 'paper it wants']),
+        (P_PURPLE, icon_spools(170), ['Click the', 'ribbon it wants']),
     ]
-    y = 280
-    for kind, text in rows:
-        if kind == 'tag':
-            d.rounded_rectangle([50, y - 34, 150, y + 34], radius=10, fill=(250, 244, 230), outline=(196, 160, 116), width=5)
-            d.line([(70, y - 8), (130, y - 8)], fill=INK, width=4)
-            d.line([(70, y + 10), (118, y + 10)], fill=INK, width=4)
-        elif kind == 'bench':
-            present(d, 100, y, 80, (238, 170, 180), RIBBON, INK, 3)
-            d.rectangle([40, y + 34, 160, y + 44], fill=(150, 110, 75))
-        elif kind == 'paper':
-            img.paste(papers[0], (40, y - 35))
-            img.paste(papers[4], (95, y - 35))
-        elif kind == 'ribbon':
-            for i, c in enumerate((RIBBON, GOLD, (90, 130, 210))):
-                d.ellipse([40 + i * 40, y - 20, 80 + i * 40, y + 20], fill=c, outline=INK, width=3)
-        else:
-            d.rectangle([45, y - 40, 155, y + 40], outline=(150, 110, 75), width=8)
-            d.line([(45, y), (155, y)], fill=(150, 110, 75), width=8)
-            present(d, 100, y - 16, 34, (150, 205, 210), RIBBON)
-        d.text((185, y), text, font=font(36), fill=INK, anchor='lm')
-        y += 165
-    d.text((W / 2, H - 70), 'Right paper and ribbon = happy customers!', font=font(30), fill=TEAL, anchor='mm')
-    img.save(out)
+    top = m + title_h + gap
+    rh = (H - m - top - 3 * gap) / 4
+    lw = 250
+    for i, (col, icon, text) in enumerate(rows):
+        y0 = top + i * (rh + gap)
+        band(img, (m, y0, m + lw, y0 + rh), col, 70 + i)
+        band(img, (m + lw + gap, y0, W - m, y0 + rh), col, 80 + i)
+        sticker(img, _placed(icon, W, H, m + lw / 2, y0 + rh / 2))
+        d = ImageDraw.Draw(img)
+        cx = (m + lw + gap + W - m) / 2
+        letter(d, (cx, y0 + rh / 2 - 26), text[0], 40, fill=(58, 50, 54))
+        letter(d, (cx, y0 + rh / 2 + 26), text[1], 40, fill=(58, 50, 54))
+    img.convert('RGB').save(out)
+
+
+def gift_plaque(out):
+    """The corridor plaque beside the gift room's door: a present sticker on a teal band, in the board style."""
+    W = 512
+    img = board(W, W, 91)
+    band(img, (22, 22, W - 22, W - 22), P_TEAL, 92)
+    sticker(img, _placed(icon_present(330, (246, 232, 214), P_RED), W, W, W / 2, W / 2 + 6), rim=14, shadow=(8, 10))
+    img.convert('RGB').save(out)
 
 
 def main():
+    only = sys.argv[1:]   # e.g. gift_sign gift_poster: rebuild just those
+    if only:
+        for name in only:
+            globals()[name](os.path.join(OUT, name + '.png'))
+        return
     cutout(os.path.join(RAW, 'spectral_raw', 'spectral_5.png'), os.path.join(OUT, 'sticker_spectral.png'))
     scan_glyph(os.path.join(OUT, 'scan_spectral.png'))
     for p in PAPERS:
@@ -275,6 +446,7 @@ def main():
     gift_tag(os.path.join(OUT, 'gift_tag.png'))
     gift_sign(os.path.join(OUT, 'gift_sign.png'))
     gift_poster(os.path.join(OUT, 'gift_poster.png'))
+    gift_plaque(os.path.join(OUT, 'gift_plaque.png'))
 
 
 if __name__ == '__main__':

@@ -20,6 +20,7 @@ namespace CatMailExpanded.Content
         public const float IX0 = -1.6f, IX1 = 4.25f, IZ0 = 21.2f, IZ1 = 26.9f, FY = 0.04f, WH = 3.8f;
         const float OX0 = IX0 - 0.2f, OZ0 = IZ0 - 0.2f, OZ1 = IZ1 + 0.2f;
         const float EX = 4.43f;                        // the corridor's west wall plane
+        internal const float HallFace = 4.71f;         // its visible hallway surface (and the dock columns' faces)
         const float OpenZ0 = 23.18f, OpenZ1 = 24.83f, OpenTop = 2.76f;   // door opening inside the frame
         const float DomeRadius = 2.7f;
         public static readonly Vector3 Centre = new((IX0 + IX1) / 2, 0f, (IZ0 + IZ1) / 2);
@@ -106,7 +107,7 @@ namespace CatMailExpanded.Content
 
         static void BuildDoor(Transform t)
         {
-            World.Mesh("door_frame", "tex_door_frame", t, DoorModelOffset, 0).name = "CME_PlanetDoorFrame";
+            FitDoorFrame(World.Mesh("door_frame", "tex_door_frame", t, DoorModelOffset, 0)).name = "CME_PlanetDoorFrame";
             var pivot = new GameObject("CME_PlanetDoorPivot");
             pivot.transform.SetParent(t, false);
             pivot.transform.position = Hinge;
@@ -115,11 +116,28 @@ namespace CatMailExpanded.Content
             leaf.transform.SetParent(pivot.transform, true);
             _doorPivot = pivot.transform;
 
-            // a starry plaque beside the door so the room reads from the corridor
+            // a starry plaque beside the door so the room reads from the corridor (on the wallpaper's surface, which
+            // stands out from the wall plane EX here)
             var signMat = ModAssets.PropMaterial("tex_planet_sign");
-            var sign = Shapes.Make("CME_PlanetSign", Shapes.Quad(), signMat, t, new Vector3(EX + 0.012f, 1.85f, 25.95f),
+            var sign = Shapes.Make("CME_PlanetSign", Shapes.Quad(), signMat, t, new Vector3(HallFace + 0.015f, 1.85f, 25.95f),
                 Quaternion.Euler(0, -90f, 0), new Vector3(0.62f, 0.62f, 1f));
             sign.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>
+        /// The door frame model is authored for the storage corridor's thinner wall. In the pile corridor's west wall
+        /// the hallway surface (wallpaper and the dock columns either side of a door) stands at x 4.71-4.72, so the
+        /// frame is stretched on its hallway side to cover the wall's cut edges; its room side stays where it is.
+        /// </summary>
+        internal static GameObject FitDoorFrame(GameObject frame)
+        {
+            const float RoomSide = 4.20f, AuthoredHall = 4.66f, WantedHall = HallFace + 0.04f;
+            float s = (WantedHall - RoomSide) / (AuthoredHall - RoomSide);
+            var tr = frame.transform;
+            var p = tr.position;
+            tr.position = new Vector3(RoomSide - s * (RoomSide - p.x), p.y, p.z);
+            tr.localScale = new Vector3(s, 1f, 1f);
+            return frame;
         }
 
         static bool Overlaps(Bounds b, Vector3 min, Vector3 max) =>

@@ -98,7 +98,7 @@ namespace CatMailExpanded.Content
 
         static void BuildDoor(Transform t)
         {
-            World.Mesh("door_frame", "tex_door_frame", t, DoorModelOffset, 0).name = "CME_MirrorDoorFrame";
+            Planetarium.FitDoorFrame(World.Mesh("door_frame", "tex_door_frame", t, DoorModelOffset, 0)).name = "CME_MirrorDoorFrame";
             var pivot = new GameObject("CME_MirrorDoorPivot");
             pivot.transform.SetParent(t, false);
             pivot.transform.position = Hinge;
@@ -149,8 +149,9 @@ namespace CatMailExpanded.Content
             var tagM = World.Find("prop_StorageTag_Left (1)", "p_DarkRoom") ?? tagL;
             // M units face their local -z, L units their local +z (as in the dark room)
             var shelfS = World.Find("p_Shelves_S", "p_BigRoom");   // the square cubby unit with drawers
-            // units stand 0.42 off the walls: the wainscot, its panels and the rail stand 0.085 proud of the wall
-            const float Off = 0.42f;
+            // units stand 0.45 off the walls: the wainscot, its panels and the rail stand 0.085 proud of the wall, and the
+            // units reach 0.35 behind their origin
+            const float Off = 0.45f;
             var units = new (GameObject tpl, GameObject tag, Vector3 pos, float yaw, Vector3 tagLocal, float tagYaw)[]
             {
                 // along the east wall, between the corner and the door
